@@ -1,0 +1,13 @@
+[project]
+name = "code"
+version = "0.1.0"
+description = "Numerical experiments for the `Unflattening by flattening` paper"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.0",
+    "qml-essentials",
+]
+
+[tool.uv.sources]
+qml-essentials = { git = "https://github.com/cirKITers/qml-essentials", rev = "2688f6b0fe3c5374a95d2c7ec82b94f13c9c0add" }
