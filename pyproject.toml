@@ -21,4 +21,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv.sources]
-qml-essentials = { git = "https://github.com/cirKITers/qml-essentials", rev = "2688f6b0fe3c5374a95d2c7ec82b94f13c9c0add" }
+qml-essentials = { git = "https://github.com/cirKITers/qml-essentials", rev = "b20f109a5cd19e55c9ed60f9cc672424bfe00140" }
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["F"]
