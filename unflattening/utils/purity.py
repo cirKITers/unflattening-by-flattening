@@ -52,3 +52,22 @@ def analytic_loss_variance(theta: np.ndarray) -> float:
     from unflattening.utils.dla import dim_g  # local import avoids import-order coupling
 
     return float(g_purity_closed_form(theta)) / dim_g(len(theta))
+
+
+def offdiag_closed_form(theta: np.ndarray) -> np.ndarray:
+    """P_g of the off-diagonal DLA for R_y product states. theta shape (..., n) -> (...)."""
+    s, c = np.sin(theta) ** 2, np.cos(theta) ** 2
+    n = theta.shape[-1]
+    P = np.zeros(theta.shape[:-1])
+    for j in range(n):
+        prod = np.ones(theta.shape[:-1])      # prod_{j<l<k} c, = 1 at k = j+1
+        for k in range(j + 1, n):
+            if (k - j) % 2 == 1:
+                P = P + s[..., j] * prod * s[..., k]
+            prod = prod * c[..., k]
+    return P
+
+
+def offdiag_uniform_mean(n: int) -> float:
+    """E_Theta[P_g] under the iid uniform prior: sum_{d odd} (n-d) 2^{-(d+1)} -> n/3 - 5/9."""
+    return sum((n - d) * 2.0 ** -(d + 1) for d in range(1, n, 2))
