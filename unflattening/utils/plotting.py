@@ -26,11 +26,11 @@ DATA_DIR.mkdir(exist_ok=True)
 # barren-plateau "bad" path; blue and navy are neutral accents.  GOOD/BAD are
 # reserved strictly for the good/bad path so the figures read consistently with
 # the Fig. 1 schematic.
-GOOD = "#009371"    # COLOURS.LIST[4] teal -- trainable / favourable input (good path)
-BAD = "#E69F00"     # COLOURS.LIST[2] orange -- barren plateau / unfavourable (bad path)
-ACCENT = "#1f78b4"  # COLOURS.LIST[7] blue -- secondary series
-STRUCT = "#002D4C"  # COLOURS.LIST[8] navy -- empirical data / structure / reference
-_PALETTE = [GOOD, ACCENT, STRUCT, BAD]
+TEAL = "#009371"    # COLOURS.LIST[4] teal; usually the good path
+ORANGE = "#E69F00"     # COLOURS.LIST[2] orange; usually the bad path
+ACCENT = "#1f78b4"  # COLOURS.LIST[7] blue; usually a secondary good/bad path
+NAVY = "#002D4C"  # COLOURS.LIST[8] navy; structure/reference/empirical data
+_PALETTE = [TEAL, ACCENT, NAVY, ORANGE]
 
 # R ``theme_paper_base()`` (theme_bw, base_size 8.5): white panel with a black
 # four-sided frame, grey92 major+minor gridlines (no minor tick marks), thin
@@ -91,7 +91,7 @@ GREY_REF = "#999999"    # COLOURS.LIST[3] grey -- reference / guide lines
 # count t, a qubit count n, a depth.  Monotone-cool so it reads as an order and
 # stays colourblind / greyscale legible, and keeps BAD=orange reserved for the
 # barren / "bad path".  Categorical (unordered) series should use the palette.
-_ORDINAL_CMAP = LinearSegmentedColormap.from_list("polar_ordinal", [GOOD, ACCENT, STRUCT])
+_ORDINAL_CMAP = LinearSegmentedColormap.from_list("polar_ordinal", [TEAL, ACCENT, NAVY])
 
 
 def ordinal_colors(k):
