@@ -14,7 +14,7 @@ E[P_g] = n(2n-1)/(2^n+1) is the 2-design average E[<psi|B|psi>^2] = 1/(2^n+1)
 over the n(2n-1) matchgate basis elements; with the in-algebra readout P_g(Z_i)=1
 this gives E[Var_W] = 1/(2^n+1).
 
-Figures: fig_input_purity (single panel: Var_W vs n, product vs Haar input).
+Figures: input_purity_scaling (single panel: Var_W vs n, product vs Haar input).
 """
 
 from __future__ import annotations
@@ -32,22 +32,20 @@ from unflattening.utils.plotting import plt, DATA_DIR, GREY_REF, TEAL, ORANGE
 
 N_SAMPLES = 2000   # random W draws per input
 N_INPUTS = 8      # Haar input draws per n
+N_RANGE = tuple(range(2, 10))  # matches dla_regime_contrast (exp_bp_contrast)
 
 
-def main() -> None:
-    rng = np.random.default_rng(5)
-    ns = list(range(2, 10))  # match fig_contrast (exp_bp_contrast) qubit range
-
+def part_input_purity(rng, key, ns=N_RANGE, n_samples=N_SAMPLES, n_inputs=N_INPUTS) -> None:
+    """Var_W vs n on a fixed matchgate DLA and readout: product input vs Haar input."""
     pg_prod, pg_haar = [], []
     var_prod, var_haar = [], []
     pred_prod, pred_haar = [], []
-    key = jax.random.PRNGKey(7)
     print("input_purity -- product input (P_g >= n-1) vs Haar input (P_g exp-small)")
     for n in ns:
         basis = matchgate_basis(n)
         theta = rng.uniform(0.0, 2 * np.pi, n)
         depth = max(16, 4 * n)
-        haar = [haar_state(n, rng) for _ in range(N_INPUTS)]
+        haar = [haar_state(n, rng) for _ in range(n_inputs)]
 
         # g-purity: structured product (closed-form >= n-1) vs Haar-random input.
         ppg = float(g_purity_from_basis(product_state(theta), basis))
@@ -58,12 +56,12 @@ def main() -> None:
         # loss variance Var_W[<Z_i>] on the *same* matchgate DLA + readout Z_i.
         npl = Ansaetze.Matchgate.n_params_per_layer(n)
         key, kp = jax.random.split(key)
-        vprod, _ = trainability.loss_variance(Ansaetze.Matchgate.build, npl, theta, depth, N_SAMPLES, kp)
+        vprod, _ = trainability.loss_variance(Ansaetze.Matchgate.build, npl, theta, depth, n_samples, kp)
         vh = []
         for psi in haar:
             key, kh = jax.random.split(key)
             v, _ = trainability.loss_variance(
-                Ansaetze.Matchgate.build, npl, None, depth, N_SAMPLES, kh, init_state=psi
+                Ansaetze.Matchgate.build, npl, None, depth, n_samples, kh, init_state=psi
             )
             vh.append(v)
         var_prod.append(vprod)
@@ -100,11 +98,16 @@ def main() -> None:
     ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
     ax.locator_params(axis="x", integer=True)
     plotting.top_legend(ax, ncol=2)
-    plotting.save(fig, "fig_input_purity")
-    np.savez(DATA_DIR / "input_purity.npz", n=ns, var_product=var_prod, var_haar=var_haar,
+    plotting.save(fig, "input_purity_scaling")
+    np.savez(DATA_DIR / "input_purity_scaling.npz", n=ns, var_product=var_prod, var_haar=var_haar,
              pg_product=pg_prod, pg_haar=pg_haar, pred_product=np.array(pred_prod),
              pred_haar=np.array(pred_haar), poly_slope=poly_slope, exp_rate=exp_rate)
     print("input_purity: done")
+
+
+def main() -> None:
+    rng = np.random.default_rng(5)
+    part_input_purity(rng, jax.random.PRNGKey(7))
 
 
 if __name__ == "__main__":

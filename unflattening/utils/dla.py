@@ -28,7 +28,7 @@ __all__ = [
     "matchgate_basis",
     "dim_g",
     "xx_yy_generators",
-    "s2b",
+    "pauli_to_bitmasks",
     "word_matrix",
     "random_dla_variance",
 ]
@@ -69,7 +69,7 @@ PAULI = {
 }
 
 
-def s2b(s: str) -> tuple[int, int]:
+def pauli_to_bitmasks(s: str) -> tuple[int, int]:
     """'XIZY' -> (x, z) bitmasks, qubit 0 leftmost."""
     x = sum(1 << i for i, c in enumerate(s) if c in "XY")
     z = sum(1 << i for i, c in enumerate(s) if c in "ZY")

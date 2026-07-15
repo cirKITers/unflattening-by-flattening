@@ -26,7 +26,7 @@ conventions are equivalent for the claims here.
 TODO: reconcile with main.tex -- keep the encoding-first equation and add a one-line
 remark that the block ordering is immaterial to the collapse/variance claims.
 
-Figure: fig_reupload (Var_W[<O>] vs re-uploading depth L; off-diagonal uniform vs
+Figure: reuploading_depth (Var_W[<O>] vs re-uploading depth L; off-diagonal uniform vs
 clustered, matchgate uniform vs clustered).
 """
 from __future__ import annotations
@@ -42,35 +42,37 @@ from unflattening.utils.priors import sample_uniform, sample_clustered
 from unflattening.utils.plotting import plt, DATA_DIR, TEAL, ORANGE, ACCENT, NAVY
 
 N_QUBITS = 6              # qubits (statevector)
-DEPTHS = [1, 2, 3, 4, 6, 8]
+DEPTHS = (1, 2, 3, 4, 6, 8)
 K_TH = 10          # angle configurations per prior
 N_SAMPLES = 1000           # random-W draws per configuration
 RAW_EPS = 0.03     # spread of the clustered angles around 0 (sample_clustered); the sigma=0 check uses exact {0, pi}^n
 SEED = 11
 
 
-def _dmask(depth: int) -> np.ndarray:
+def _reupload_mask(depth: int, n_qubits: int = N_QUBITS) -> np.ndarray:
     """Per-layer diagonal data-reupload mask (qubit q reads input feature q), so the
     encoding S(Theta) = prod_q R_y(theta_q) has per-qubit distinct angles."""
-    return np.broadcast_to(np.eye(N_QUBITS, dtype=bool), (depth, N_QUBITS, N_QUBITS)).copy()
+    return np.broadcast_to(np.eye(n_qubits, dtype=bool), (depth, n_qubits, n_qubits)).copy()
 
 
-def var_vs_depth(circuit_type: str, thetas: np.ndarray, obs, key) -> np.ndarray:
-    """Var_W[<O>] for each theta row and depth in DEPTHS, via qml_essentials.Model.
+def var_vs_depth(circuit_type: str, thetas: np.ndarray, obs, key,
+                 n_qubits: int = N_QUBITS, depths=DEPTHS,
+                 n_samples: int = N_SAMPLES) -> np.ndarray:
+    """Var_W[<O>] for each theta row and depth in ``depths``, via qml_essentials.Model.
 
     ``Model`` builds the ansatz-first re-uploading circuit with ``n_layers=depth``
     (data_reupload -> depth+1 ansatz layers); ``obs`` is summed to the scalar loss
-    <sum_i O_i>.  Returns ``(len(DEPTHS), K_TH)``.
+    <sum_i O_i>.  Returns ``(len(depths), len(thetas))``.
     """
-    out = np.zeros((len(DEPTHS), thetas.shape[0]))
-    for di, depth in enumerate(DEPTHS):
+    out = np.zeros((len(depths), thetas.shape[0]))
+    for di, depth in enumerate(depths):
         model = Model(
-            n_qubits=N_QUBITS, n_layers=depth, circuit_type=circuit_type,
-            data_reupload=_dmask(depth), encoding=["RY"] * N_QUBITS,
+            n_qubits=n_qubits, n_layers=depth, circuit_type=circuit_type,
+            data_reupload=_reupload_mask(depth, n_qubits), encoding=["RY"] * n_qubits,
             observables=obs,
         )
         key, sub = jax.random.split(key)
-        W = jax.random.uniform(sub, (N_SAMPLES, *model._params_shape), minval=0.0, maxval=2 * np.pi)
+        W = jax.random.uniform(sub, (n_samples, *model._params_shape), minval=0.0, maxval=2 * np.pi)
         for ti, th in enumerate(thetas):
             vals = np.asarray(model(params=W, inputs=jnp.asarray(th, dtype=float),
                                     execution_type="expval"))
@@ -80,10 +82,10 @@ def var_vs_depth(circuit_type: str, thetas: np.ndarray, obs, key) -> np.ndarray:
     return out
 
 
-def main() -> None:
-    rng = np.random.default_rng(SEED)
-    key = jax.random.PRNGKey(SEED)
-    i_out = N_QUBITS // 2 - 1
+def part_reuploading(rng, key, n_qubits=N_QUBITS, depths=DEPTHS, k_th=K_TH,
+                     n_samples=N_SAMPLES, raw_eps=RAW_EPS) -> None:
+    """Var_W[<O>] vs re-uploading depth, and the exact zero at clustered angles."""
+    i_out = n_qubits // 2 - 1
 
     # ---- off-diagonal family: XX+YY layers, in-algebra readout on a bulk bond ----
     XXYY = [
@@ -91,25 +93,25 @@ def main() -> None:
         op.PauliY(wires=i_out) @ op.PauliY(wires=i_out + 1),
     ]
     # ---- matchgate control: RZ + XX layers, in-algebra readout Z_i ----
-    Zi = [op.PauliZ(wires=N_QUBITS // 2)]
+    Zi = [op.PauliZ(wires=n_qubits // 2)]
 
-    th_unif = sample_uniform(rng, K_TH, N_QUBITS)
-    th_clus = sample_clustered(rng, K_TH, N_QUBITS, RAW_EPS)
-    th_exact = rng.integers(0, 2, size=(K_TH, N_QUBITS)) * np.pi  # sigma = 0
+    th_unif = sample_uniform(rng, k_th, n_qubits)
+    th_clus = sample_clustered(rng, k_th, n_qubits, raw_eps)
+    th_exact = rng.integers(0, 2, size=(k_th, n_qubits)) * np.pi  # sigma = 0
 
     key, k1, k2, k3, k4, k5 = jax.random.split(key, 6)
-    od_unif = var_vs_depth("XY_Brickwork", th_unif, XXYY, k1)
-    od_clus = var_vs_depth("XY_Brickwork", th_clus, XXYY, k2)
-    mg_unif = var_vs_depth("Matchgate", th_unif, Zi, k3)
-    mg_clus = var_vs_depth("Matchgate", th_clus, Zi, k4)
+    od_unif = var_vs_depth("XY_Brickwork", th_unif, XXYY, k1, n_qubits, depths, n_samples)
+    od_clus = var_vs_depth("XY_Brickwork", th_clus, XXYY, k2, n_qubits, depths, n_samples)
+    mg_unif = var_vs_depth("Matchgate", th_unif, Zi, k3, n_qubits, depths, n_samples)
+    mg_clus = var_vs_depth("Matchgate", th_clus, Zi, k4, n_qubits, depths, n_samples)
 
     # exact zero at sigma = 0, at every depth (Pauli-normaliser collapse + Prop. 5):
     # measure the raw loss values, not the variance, and demand machine zero.
     worst = 0.0
-    for depth in (1, DEPTHS[-1]):
+    for depth in (1, depths[-1]):
         model = Model(
-            n_qubits=N_QUBITS, n_layers=depth, circuit_type="XY_Brickwork",
-            data_reupload=_dmask(depth), encoding=["RY"] * N_QUBITS,
+            n_qubits=n_qubits, n_layers=depth, circuit_type="XY_Brickwork",
+            data_reupload=_reupload_mask(depth, n_qubits), encoding=["RY"] * n_qubits,
             observables=XXYY,
         )
         key, sub = jax.random.split(key)
@@ -137,17 +139,21 @@ def main() -> None:
     ):
         mean = dat.mean(axis=1)
         lo, hi = np.quantile(dat, 0.1, axis=1), np.quantile(dat, 0.9, axis=1)
-        ax.plot(DEPTHS, mean, "o" + ls, color=color, ms=3.5, lw=1.1, label=label)
-        ax.fill_between(DEPTHS, lo, hi, color=color, alpha=0.15, lw=0)
+        ax.plot(depths, mean, "o" + ls, color=color, ms=3.5, lw=1.1, label=label)
+        ax.fill_between(depths, lo, hi, color=color, alpha=0.15, lw=0)
     ax.set_yscale("log")
     ax.set_xlabel(r"Re-uploading depth $L$")
     ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle \mathcal{M}\rangle]$")
-    ax.set_xticks(DEPTHS)
+    ax.set_xticks(depths)
     plotting.top_legend(ax, ncol=2)
-    plotting.save(fig, "fig_reupload")
-    np.savez(DATA_DIR / "reupload.npz", depths=DEPTHS, od_unif=od_unif, od_clus=od_clus,
+    plotting.save(fig, "reuploading_depth")
+    np.savez(DATA_DIR / "reuploading_depth.npz", depths=depths, od_unif=od_unif, od_clus=od_clus,
              mg_unif=mg_unif, mg_clus=mg_clus, exact_zero_max=worst)
-    print("saved fig_reupload")
+    print("saved reuploading_depth")
+
+
+def main() -> None:
+    part_reuploading(np.random.default_rng(SEED), jax.random.PRNGKey(SEED))
 
 
 if __name__ == "__main__":

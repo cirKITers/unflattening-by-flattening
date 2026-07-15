@@ -10,7 +10,7 @@ DLA differs.  This is the numerical face of Eq. (ragone): trainability is set by
 the 1/dim(g_j) weighting, exponential for the full-rank ansatz, polynomial for
 the matchgate one.
 
-Figures: fig_contrast (single panel: Var vs n with poly/exp reference lines).
+Figures: dla_regime_contrast (single panel: Var vs n with poly/exp reference lines).
 """
 
 from __future__ import annotations
@@ -24,16 +24,15 @@ from unflattening.utils.purity import analytic_loss_variance
 from unflattening.utils import plotting
 from unflattening.utils.plotting import plt, DATA_DIR, GREY_REF, TEAL, ORANGE
 
-N_SAMPLES = 2500
+N_SAMPLES = 2500          # random W draws per n
+N_RANGE = tuple(range(2, 10))  # qubit sweep
 
 
-def main() -> None:
-    rng = np.random.default_rng(3)
-    ns = list(range(2, 10))
+def part_contrast(rng, key, ns=N_RANGE, n_samples=N_SAMPLES) -> None:
+    """Var_W vs n for the matchgate (poly DLA) and Strongly_Entangling (full DLA) ansaetze."""
     ge_layer, ge_npl = trainability.ansatz_layer("Strongly_Entangling")
 
     var_mg, var_ge, pred_mg = [], [], []
-    key = jax.random.PRNGKey(11)
     print("bp_contrast -- matchgate (poly DLA) vs Strongly_Entangling (full DLA)")
     for n in ns:
         theta = rng.uniform(0.0, 2 * np.pi, n)
@@ -41,9 +40,9 @@ def main() -> None:
         key, k1, k2 = jax.random.split(key, 3)
         vmg, _ = trainability.loss_variance(
             Ansaetze.Matchgate.build, Ansaetze.Matchgate.n_params_per_layer(n),
-            theta, depth, N_SAMPLES, k1
+            theta, depth, n_samples, k1
         )
-        vge, _ = trainability.loss_variance(ge_layer, ge_npl(n), theta, depth, N_SAMPLES, k2)
+        vge, _ = trainability.loss_variance(ge_layer, ge_npl(n), theta, depth, n_samples, k2)
         var_mg.append(vmg)
         var_ge.append(vge)
         pred_mg.append(analytic_loss_variance(theta))
@@ -71,10 +70,15 @@ def main() -> None:
     ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
     ax.locator_params(axis="x", integer=True)
     plotting.top_legend(ax, ncol=2)
-    plotting.save(fig, "fig_contrast")
-    np.savez(DATA_DIR / "contrast.npz", n=ns, matchgate=var_mg, generic=var_ge,
+    plotting.save(fig, "dla_regime_contrast")
+    np.savez(DATA_DIR / "dla_regime_contrast.npz", n=ns, matchgate=var_mg, generic=var_ge,
              pred_matchgate=np.array(pred_mg), poly_slope=poly_slope, exp_rate=exp_rate)
     print("bp_contrast: done")
+
+
+def main() -> None:
+    rng = np.random.default_rng(3)
+    part_contrast(rng, jax.random.PRNGKey(11))
 
 
 if __name__ == "__main__":

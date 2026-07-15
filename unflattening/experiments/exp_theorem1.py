@@ -10,7 +10,7 @@ estimates the loss variance Var_W[<Z_i>].
   Panel 2 (scaling): across n, Var_W tracks P_g/dim g = Theta(1/n) (slope -1 on
       log-log), inside the proven range [(n-1)/(n(2n-1)), 1/(2n-1)].
 
-Figures: fig_convergence, fig_scaling.
+Figures: matchgate_convergence, matchgate_scaling.
 """
 
 from __future__ import annotations
@@ -26,11 +26,14 @@ from unflattening.utils import plotting
 from unflattening.utils.plotting import plt, DATA_DIR, GREY_FILL, TEAL, ACCENT, NAVY
 
 N_SAMPLES = 2000
+CONV_RANGE = (4, 6, 8)                        # qubit counts for the convergence panel
+CONV_DEPTHS = (1, 2, 4, 8, 16, 24, 32)        # brickwork depths swept at fixed n
+SCALING_RANGE = tuple(range(2, 13))           # qubit sweep for the scaling panel
+SCALING_DEPTH_FACTOR = 6                      # depth = SCALING_DEPTH_FACTOR * n
 
 
-def part_convergence(rng, key):
-    ns = [4, 6, 8]
-    depths = [1, 2, 4, 8, 16, 24, 32]
+def part_convergence(rng, key, ns=CONV_RANGE, depths=CONV_DEPTHS, n_samples=N_SAMPLES):
+    """Var_W -> P_g/dim g as the brickwork depth grows, at fixed n."""
     series = (TEAL, ACCENT, NAVY)  # all trainable: cool gradient, no barren gold
     fig, ax = plt.subplots(figsize=(plotting.COL, 2.6))
     print("  convergence Var_W -> P_g/dim_g:")
@@ -42,7 +45,7 @@ def part_convergence(rng, key):
             key, sub = jax.random.split(key)
             v, _ = trainability.loss_variance(
                 Ansaetze.Matchgate.build, Ansaetze.Matchgate.n_params_per_layer(n),
-                theta, d, N_SAMPLES, sub
+                theta, d, n_samples, sub
             )
             vs.append(v)
         print(f"    n={n}: pred={pred:.5f}  Var(depth={depths[-1]})={vs[-1]:.5f}")
@@ -57,20 +60,21 @@ def part_convergence(rng, key):
     ai = labels.index(r"$P_{\mathfrak{g}}/\dim\mathfrak{g}$")
     order = [ai] + [i for i in range(len(labels)) if i != ai]
     plotting.top_legend(ax, [handles[i] for i in order], [labels[i] for i in order])
-    plotting.save(fig, "fig_convergence")
+    plotting.save(fig, "matchgate_convergence")
 
 
-def part_scaling(rng, key):
-    ns = list(range(2, 13))
+def part_scaling(rng, key, ns=SCALING_RANGE, n_samples=N_SAMPLES,
+                 depth_factor=SCALING_DEPTH_FACTOR):
+    """Var_W vs n at converged depth: tracks P_g/dim g = Theta(1/n)."""
     emp, pred, lo, hi = [], [], [], []
-    print("  scaling Var_W vs n (depth=6n):")
+    print(f"  scaling Var_W vs n (depth={depth_factor}n):")
     for n in ns:
         theta = rng.uniform(0.0, 2 * np.pi, n)
-        depth = 6 * n
+        depth = depth_factor * n
         key, sub = jax.random.split(key)
         v, _ = trainability.loss_variance(
             Ansaetze.Matchgate.build, Ansaetze.Matchgate.n_params_per_layer(n),
-            theta, depth, N_SAMPLES, sub
+            theta, depth, n_samples, sub
         )
         emp.append(v)
         pred.append(analytic_loss_variance(theta))
@@ -88,15 +92,15 @@ def part_scaling(rng, key):
     ax.plot(ns, pred, "-", color=TEAL, label=r"$P_{\mathfrak{g}}/\dim\mathfrak{g}$")
     ax.plot(ns, emp, "o", color=NAVY, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$", zorder=5)
     ax.set_xscale("log", base=2); ax.set_yscale("log")
-    # match the y-ticks of fig_convergence: label only {6e-2, 1e-1, 2e-1, 3e-1}
+    # match the y-ticks of matchgate_convergence: label only {6e-2, 1e-1, 2e-1, 3e-1}
     ax.set_yticks([6e-2, 1e-1, 2e-1, 3e-1])
     ax.set_yticks([], minor=True)
     ax.yaxis.set_major_formatter(LogFormatterSciNotation())
     ax.set_xlabel("$n$ Qubits")
     ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
     plotting.top_legend(ax, ncol=3)
-    plotting.save(fig, "fig_scaling")
-    np.savez(DATA_DIR / "scaling.npz", n=ns, empirical=emp, analytic=pred, slope=slope)
+    plotting.save(fig, "matchgate_scaling")
+    np.savez(DATA_DIR / "matchgate_scaling.npz", n=ns, empirical=emp, analytic=pred, slope=slope)
 
 
 def main() -> None:

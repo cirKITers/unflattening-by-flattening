@@ -47,11 +47,11 @@ def jaqsi_state(theta: np.ndarray) -> np.ndarray:
     )
 
 
-def main() -> None:
-    rng = np.random.default_rng(0)
+def part_validate(rng, n_max=N_MAX, n_random=N_RANDOM, tol=TOL) -> bool:
+    """Basis == Lie closure, and the closed / product forms == the basis sum (Prop. 1)."""
     rows = []
     ok = True
-    for n in range(2, N_MAX + 1):
+    for n in range(2, n_max + 1):
         basis = dla.matchgate_basis(n)
         closure = dla.lie_closure(dla.matchgate_generators(n))
         dim_ok = len(basis) == dla.dim_g(n) == len(closure)
@@ -60,7 +60,7 @@ def main() -> None:
         max_diff = 0.0
         max_product_diff = 0.0
         max_state_err = 0.0
-        for _ in range(N_RANDOM):
+        for _ in range(n_random):
             theta = rng.uniform(0.0, 2 * np.pi, n)
             psi = product_state(theta)
             p_closed = float(g_purity_closed_form(theta))
@@ -72,7 +72,7 @@ def main() -> None:
             # JAQSI statevector cross-check (qubit-0-leftmost convention).
             max_state_err = max(max_state_err, float(np.max(np.abs(jaqsi_state(theta) - psi))))
 
-        passed = dim_ok and set_ok and max_diff < TOL and max_product_diff < TOL and max_state_err < 1e-6
+        passed = dim_ok and set_ok and max_diff < tol and max_product_diff < tol and max_state_err < 1e-6
         ok = ok and passed
         print(
             f"n={n}: dim={len(basis)} (=n(2n-1)={dla.dim_g(n)}) "
@@ -99,6 +99,11 @@ def main() -> None:
         w.writeheader()
         w.writerows(rows)
     print(f"\nwrote {out}")
+    return ok
+
+
+def main() -> None:
+    ok = part_validate(np.random.default_rng(0))
     print("closedform:", "PASS" if ok else "FAIL")
 
 

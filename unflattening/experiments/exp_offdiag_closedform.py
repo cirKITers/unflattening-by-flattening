@@ -14,8 +14,9 @@ the on-site sum cos^2 floor term removed.  Three checks:
   * the two-ideal readout factor Var_theta = 2 P_g/dim g (sec:proofs) against deep
     random e^{g_od} statevector circuits at n = 6 (part_variance).
 
-Figure: fig_offdiag_purity (mean P_g vs n, uniform vs clustered, with the closed-form
-mean overlaid and brute-force-basis markers).
+Figures: offdiag_purity (mean P_g vs n, uniform vs clustered, with the closed-form
+mean overlaid and brute-force-basis markers) and purity_regime_contrast (matchgate
+floor band vs off-diagonal collapse as the angles cluster).
 """
 from __future__ import annotations
 
@@ -38,21 +39,27 @@ N_SAMPLES_PRIOR = 4000      # samples for the prior means
 N_SAMPLES_BRUTE = 4000      # samples for the brute-force markers
 RAW_EPS = 0.03     # spread of the clustered angles around {0, pi}
 TOL = 1e-10
+N_REGIME = 10      # qubits for the regime contrast
+SIGMA_POINTS = 24  # angle-spread grid points in the regime contrast
+N_VARIANCE = 6     # qubits for the statevector variance check
+M_VARIANCE = 2000  # random circuits in the statevector variance check
+DEPTH_VARIANCE = 2000  # rotations per random circuit
 
 
-def part_validate(rng: np.random.Generator) -> None:
+def part_validate(rng: np.random.Generator, n_max: int = N_VALID,
+                  n_random: int = N_RANDOM, tol: float = TOL) -> None:
     """Closed form == brute-force lie-closure basis, and dim g = n(n-1)."""
     ok = True
-    for n in range(2, N_VALID + 1):
+    for n in range(2, n_max + 1):
         basis = lie_closure_paulis(xx_yy_generators(n))
         dim_ok = len(basis) == n * (n - 1)
         max_diff = 0.0
-        for _ in range(N_RANDOM):
+        for _ in range(n_random):
             theta = rng.uniform(0.0, 2 * np.pi, n)
             p_closed = float(offdiag_closed_form(theta))
             p_basis = float(g_purity_from_basis(product_state(theta), basis))
             max_diff = max(max_diff, abs(p_closed - p_basis))
-        passed = dim_ok and max_diff < TOL
+        passed = dim_ok and max_diff < tol
         ok = ok and passed
         print(f"  n={n}: dim g={len(basis)} (=n(n-1)? {dim_ok})  "
               f"max|closed-basis|={max_diff:.2e}  {'PASS' if passed else 'FAIL'}")
@@ -66,13 +73,13 @@ def diagonal_count(basis, axis: str = "Z") -> int:
                if set(B if isinstance(B, str) else B.to_pauli_string()) <= {"I", axis})
 
 
-def part_criterion() -> None:
+def part_criterion(n_max: int = N_VALID) -> None:
     """Covariant floor criterion P_g(clustered) = d_A(g), for the clustering observable A.
     A=Z (R_y, |0...0>): off-diag d_Z=0 (floor-free), matchgate d_Z=n.
     A=X (phase enc, |+...+>): off-diag d_X=n-1 (FLOORED) -- floor-freeness is a joint property
     of the encoding and the algebra, not the algebra alone."""
     ok = True
-    for n in range(2, N_VALID + 1):
+    for n in range(2, n_max + 1):
         offdiag, mg = lie_closure_paulis(xx_yy_generators(n)), matchgate_basis(n)
         zero = product_state(np.zeros(n))            # |0...0>, A=Z clustering (R_y poles)
         plus = product_state(np.full(n, np.pi / 2))  # |+...+>, A=X clustering (phase-encoding poles)
@@ -91,22 +98,24 @@ def part_criterion() -> None:
     assert ok, "covariant floor criterion: P_g(clustered)=d_A(g) for A in {Z (|0>), X (|+>)}"
 
 
-def part_figure(rng: np.random.Generator) -> None:
+def part_purity(rng: np.random.Generator, n_max: int = N_FIG, n_brute: int = N_BRUTE,
+                n_samples: int = N_SAMPLES_PRIOR, n_samples_brute: int = N_SAMPLES_BRUTE,
+                raw_eps: float = RAW_EPS) -> None:
     """Mean P_g vs n: uniform (Omega(n)) vs clustered (-> 0); closed form vs basis."""
-    ns = np.arange(2, N_FIG + 1)
+    ns = np.arange(2, n_max + 1)
     mean_unif, mean_clus, ana = [], [], []
     for n in ns:
-        mean_unif.append(float(offdiag_closed_form(sample_uniform(rng, N_SAMPLES_PRIOR, n)).mean()))
-        mean_clus.append(float(offdiag_closed_form(sample_raw(rng, N_SAMPLES_PRIOR, n, RAW_EPS)).mean()))
+        mean_unif.append(float(offdiag_closed_form(sample_uniform(rng, n_samples, n)).mean()))
+        mean_clus.append(float(offdiag_closed_form(sample_raw(rng, n_samples, n, raw_eps)).mean()))
         ana.append(offdiag_uniform_mean(int(n)))
     mean_unif, mean_clus, ana = np.array(mean_unif), np.array(mean_clus), np.array(ana)
 
     # brute-force-basis means at small n, to show the closed form == the actual DLA basis
-    ns_b = np.arange(2, N_BRUTE + 1)
+    ns_b = np.arange(2, n_brute + 1)
     mean_brute = []
     for n in ns_b:
         basis = lie_closure_paulis(xx_yy_generators(int(n)))
-        thetas = sample_uniform(rng, N_SAMPLES_BRUTE, int(n))
+        thetas = sample_uniform(rng, n_samples_brute, int(n))
         mean_brute.append(float(np.mean([g_purity_from_basis(product_state(t), basis) for t in thetas])))
     mean_brute = np.array(mean_brute)
 
@@ -114,7 +123,7 @@ def part_figure(rng: np.random.Generator) -> None:
     # Var_theta = 2 P_g/dim g: eq (ragone) sums over the two n(n-1)/2-dim ideals
     # of so(n)+so(n) and the XX+YY readout puts one basis string in each ideal, so
     # Var = P_A/(dim/2) + P_B/(dim/2) = 2 P_g/dim g regardless of the P split
-    # (validated against statevector simulation at n=6 in part_variance).
+    # (validated against statevector simulation in part_variance).
     var_unif, var_clus = 2 * mean_unif / dim, 2 * mean_clus / dim
 
     # runnable checks: closed form tracks analytic mean + brute-force basis; uniform purity grows
@@ -175,18 +184,19 @@ def part_figure(rng: np.random.Generator) -> None:
     axlo_v.yaxis.set_label_coords(1.16, 1.0)
 
     plotting.top_legend(axhi, ncol=2)
-    plotting.save(fig, "fig_offdiag_purity")
+    plotting.save(fig, "offdiag_purity")
     np.savez(DATA_DIR / "offdiag_purity.npz", n=ns, uniform=mean_unif, clustered=mean_clus,
              analytic=ana, var_uniform=var_unif, var_clustered=var_clus, n_brute=ns_b, brute=mean_brute)
 
 
-def part_regime(rng: np.random.Generator, n: int = 10) -> None:
+def part_regime(rng: np.random.Generator, n: int = N_REGIME,
+                n_samples: int = N_SAMPLES_PRIOR, sigma_points: int = SIGMA_POINTS) -> None:
     """Regime contrast supporting the floor criterion: as the R_y angles cluster at {0,pi},
     the matchgate purity stays in its floor band [n-1, n] (distribution-insensitive, d_Z=n)
     while the off-diagonal purity collapses toward 0 (distribution-decides, d_Z=0)."""
-    sigmas = np.logspace(np.log10(0.03), np.log10(np.pi), 24)  # angle spread: clustered -> ~uniform
-    mg = np.array([float(g_purity_closed_form(sample_raw(rng, N_SAMPLES_PRIOR, n, s)).mean()) for s in sigmas])
-    od = np.array([float(offdiag_closed_form(sample_raw(rng, N_SAMPLES_PRIOR, n, s)).mean()) for s in sigmas])
+    sigmas = np.logspace(np.log10(0.03), np.log10(np.pi), sigma_points)  # clustered -> ~uniform
+    mg = np.array([float(g_purity_closed_form(sample_raw(rng, n_samples, n, s)).mean()) for s in sigmas])
+    od = np.array([float(offdiag_closed_form(sample_raw(rng, n_samples, n, s)).mean()) for s in sigmas])
     # runnable checks: matchgate stays in the proven floor band [n-1, n] across every spread
     # (distribution-insensitive), while the off-diagonal collapses when the angles cluster.
     assert mg.min() > n - 1 - 1e-6 and mg.max() < n + 1e-6, "matchgate purity must stay in [n-1, n]"
@@ -202,21 +212,21 @@ def part_regime(rng: np.random.Generator, n: int = 10) -> None:
     ax.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
     ax.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
     ax.legend(loc="lower right", fontsize=7.5)
-    plotting.save(fig, "fig_criterion")
-    np.savez(DATA_DIR / "criterion.npz", sigma=sigmas, matchgate=mg, offdiag=od, n=n)
+    plotting.save(fig, "purity_regime_contrast")
+    np.savez(DATA_DIR / "purity_regime_contrast.npz", sigma=sigmas, matchgate=mg, offdiag=od, n=n)
 
 
-def part_variance(rng: np.random.Generator, n: int = 6, M: int = 2000,
-                  depth: int = 2000) -> None:
+def part_variance(rng: np.random.Generator, n: int = N_VARIANCE, M: int = M_VARIANCE,
+                  depth: int = DEPTH_VARIANCE) -> None:
     """Statevector check of the two-ideal readout factor (sec:proofs): deep random
     e^{g_od} circuits with the in-algebra readout O = X_i X_{i+1} + Y_i Y_{i+1}
     give Var_theta = 2 P_g/dim g, i.e. ~2x the naive single-ideal P_g/dim g."""
-    from unflattening.utils.dla import s2b, word_matrix, random_dla_variance
+    from unflattening.utils.dla import pauli_to_bitmasks, word_matrix, random_dla_variance
 
     i = n // 2 - 1  # bulk bond (i, i+1), as in exp_reuploading/exp_precondition
-    gen_mats = [word_matrix(*s2b(g), n) for g in xx_yy_generators(n)]
-    O = word_matrix(*s2b("I" * i + "XX" + "I" * (n - i - 2)), n) \
-        + word_matrix(*s2b("I" * i + "YY" + "I" * (n - i - 2)), n)
+    gen_mats = [word_matrix(*pauli_to_bitmasks(g), n) for g in xx_yy_generators(n)]
+    O = word_matrix(*pauli_to_bitmasks("I" * i + "XX" + "I" * (n - i - 2)), n) \
+        + word_matrix(*pauli_to_bitmasks("I" * i + "YY" + "I" * (n - i - 2)), n)
     dim = n * (n - 1)
     rows = []
     for label in ("uniform-1", "uniform-2"):
@@ -240,9 +250,9 @@ def main() -> None:
     print("offdiag_closedform -- off-diagonal P_g: closed form vs basis, uniform vs clustered")
     part_validate(rng)
     part_criterion()
-    part_regime(rng)
-    part_figure(rng)
-    print("  two-ideal variance factor vs statevector, g_od at n=6:")
+    part_regime(rng)   # before part_purity: shared rng, draw order is load-bearing
+    part_purity(rng)
+    print(f"  two-ideal variance factor vs statevector, g_od at n={N_VARIANCE}:")
     part_variance(np.random.default_rng(1))  # own rng: keeps the figure data unchanged
     print("offdiag_closedform: done")
 
