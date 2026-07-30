@@ -1,7 +1,7 @@
 """uniform_prior -- Lemmas 1 and 2 (deterministic bound + uniform-prior purity).
 
   (1) Mean: E_Theta[P_g] under the uniform prior matches n-1+2^{-n} (Lemma 2),
-      for n up to 100 -- the "cheap sanity check" the manuscript proposes.
+      for n up to 18 -- the "cheap sanity check" the manuscript proposes.
   (2) Deterministic range: every sampled (and adversarial) Theta obeys
       n-1 <= P_g <= n (Lemma 1); empirical infimum ~ n-1 (theta_k=pi/2).
   (3) Polar-encoding worked example: isotropic (random-rotation) preconditioning
@@ -20,7 +20,7 @@ from unflattening.utils.purity import g_purity_closed_form
 from unflattening.utils import plotting
 from unflattening.utils.plotting import plt, DATA_DIR, GREY_FILL, TEAL, ORANGE, NAVY
 
-N_RANGE = (2, 4, 8, 16, 32, 64, 100)  # qubit counts for the mean check
+N_RANGE = tuple(range(2, 19))         # qubit counts for the mean check (matches the other n sweeps)
 N_SAMPLES = 4000                      # angle configurations per point
 N_POLAR = 32                          # qubits for the polar worked example
 ANISO_RHO = 0.97                      # coordinate-pair correlation of the raw data
@@ -50,7 +50,7 @@ def part_mean(rng, ns=N_RANGE, m=N_SAMPLES):
     ax.fill_between(ns, lo, hi, color=GREY_FILL, label="Proven Range")
     ax.plot(ns, ana, "-", color=TEAL, label=r"$n-1+2^{-n}$ (analytic mean)")
     ax.plot(ns, emp, "o", color=NAVY, label="Empirical Mean", zorder=5)
-    ax.set_xscale("log"); ax.set_yscale("log")
+    ax.set_yscale("log")
     ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
     plotting.top_legend(ax, ncol=2)
     plotting.save(fig, "uniform_prior_mean")

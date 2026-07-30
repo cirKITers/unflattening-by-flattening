@@ -21,7 +21,6 @@ floor band vs off-diagonal collapse as the angles cluster).
 from __future__ import annotations
 
 import numpy as np
-from matplotlib.ticker import NullFormatter, NullLocator
 
 from unflattening.utils import plotting
 from unflattening.utils.dla import lie_closure_paulis, matchgate_basis, xx_yy_generators
@@ -142,6 +141,7 @@ def part_purity(rng: np.random.Generator, n_max: int = N_FIG, n_brute: int = N_B
     fig, (axhi, axlo) = plt.subplots(
         2, 1, sharex=True, figsize=(plotting.COL, 2.6),
         gridspec_kw={"height_ratios": [1, 1]})
+    fig.get_layout_engine().set(hspace=0.0, h_pad=0.02)    # close the broken-axis gap (todo: less whitespace)
     for a in (axhi, axlo):
         lbl = a is axhi                                    # legend handles from the upper panel only
         a.plot(ns_b, mean_brute, "+", color=NAVY, ms=7, mew=1.4, zorder=5,
@@ -149,7 +149,6 @@ def part_purity(rng: np.random.Generator, n_max: int = N_FIG, n_brute: int = N_B
         a.plot(ns, mean_unif, "-", color=TEAL, label="Uniform prior" if lbl else None)
         a.plot(ns, mean_clus, "-", color=ORANGE, label="Clustered prior" if lbl else None)
         a.set_yscale("log")
-        a.yaxis.set_minor_formatter(NullFormatter())       # no minor-tick labels in a sub-decade band
     axhi.set_ylim(0.18, 8.0)                               # uniform band
     axlo.set_ylim(5e-7, 1.2e-4)                            # clustered band
 
@@ -160,10 +159,10 @@ def part_purity(rng: np.random.Generator, n_max: int = N_FIG, n_brute: int = N_B
         av.plot(ns, var_unif, "--", color=TEAL, lw=1.1)
         av.plot(ns, var_clus, "--", color=ORANGE, lw=1.1)
         av.set_yscale("log")
-        av.yaxis.set_minor_locator(NullLocator())          # no secondary minor ticks
-        av.grid(False)                                      # keep the primary grid only
     axhi_v.set_ylim(0.028, 0.32)                           # uniform var band
     axlo_v.set_ylim(3.3e-7, 1.0e-6)                        # clustered var band
+    plotting.unify_grid(axhi, axhi_v)                      # major decade grid on the primary panels only
+    plotting.unify_grid(axlo, axlo_v)
 
     for a in (axhi, axhi_v):                               # hide the inner (facing) spines and top-panel x ticks
         a.spines["bottom"].set_visible(False)
@@ -197,23 +196,39 @@ def part_regime(rng: np.random.Generator, n: int = N_REGIME,
     sigmas = np.logspace(np.log10(0.03), np.log10(np.pi), sigma_points)  # clustered -> ~uniform
     mg = np.array([float(g_purity_closed_form(sample_raw(rng, n_samples, n, s)).mean()) for s in sigmas])
     od = np.array([float(offdiag_closed_form(sample_raw(rng, n_samples, n, s)).mean()) for s in sigmas])
+    # Var_theta = 2 P_g/dim g for the in-algebra XX+YY readout (same as part_purity /
+    # fig:offdiag): so(2n) and so(n)(+)so(n) each carry two readout strings, so both use 2P/dim.
+    dim_mg, dim_od = n * (2 * n - 1), n * (n - 1)
+    var_mg, var_od = 2 * mg / dim_mg, 2 * od / dim_od
     # runnable checks: matchgate stays in the proven floor band [n-1, n] across every spread
-    # (distribution-insensitive), while the off-diagonal collapses when the angles cluster.
+    # (distribution-insensitive), while the off-diagonal collapses when the angles cluster;
+    # the readout variance inherits the same behaviour (matchgate flat/floored, off-diag collapses).
     assert mg.min() > n - 1 - 1e-6 and mg.max() < n + 1e-6, "matchgate purity must stay in [n-1, n]"
     assert od[0] < 0.05 * od[-1], "off-diagonal purity must collapse under clustering (floor-free)"
+    assert var_mg.min() > 0.5 * var_mg.max(), "matchgate variance stays flat (floored)"
+    assert var_od[0] < 0.05 * var_od[-1], "off-diagonal variance collapses (floor-free)"
 
-    fig, ax = plt.subplots(figsize=(plotting.COL, 2.2))
+    fig, ax = plt.subplots(figsize=(plotting.COL, 1.9))    # flatter plot box, matches fig:hollow aspect
     ax.axhline(n, color=GREY_REF, ls=":", lw=0.9)          # d_Z = n, matchgate clustered limit
     ax.plot(sigmas, mg, "o-", color=TEAL, ms=3.5, label=r"Matchgate ($d_Z{=}n$)")
     ax.plot(sigmas, od, "o-", color=ORANGE, ms=3.5, label=r"Off-diagonal ($d_Z{=}0$)")
+    ax.plot([], [], "--", color="0.35", lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")  # dashed = variance
     ax.set_xscale("log")
     ax.set_yscale("log")
-    plotting.sparse_ylog(ax)
     ax.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
     ax.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
+
+    axv = ax.twinx()                                       # loss variance on the right axis (dashed)
+    axv.plot(sigmas, var_mg, "--", color=TEAL, lw=1.1)
+    axv.plot(sigmas, var_od, "--", color=ORANGE, lw=1.1)
+    axv.set_yscale("log")
+    axv.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2P_{\mathfrak{g}}/\dim\mathfrak{g}$")
+
+    plotting.unify_grid(ax, axv)                            # major decade grid on the primary axis only
     ax.legend(loc="lower right", fontsize=7.5)
     plotting.save(fig, "purity_regime_contrast")
-    np.savez(DATA_DIR / "purity_regime_contrast.npz", sigma=sigmas, matchgate=mg, offdiag=od, n=n)
+    np.savez(DATA_DIR / "purity_regime_contrast.npz", sigma=sigmas, matchgate=mg, offdiag=od,
+             var_matchgate=var_mg, var_offdiag=var_od, n=n)
 
 
 def part_variance(rng: np.random.Generator, n: int = N_VARIANCE, M: int = M_VARIANCE,

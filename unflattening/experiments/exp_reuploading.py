@@ -145,6 +145,7 @@ def part_reuploading(rng, key, n_qubits=N_QUBITS, depths=DEPTHS, k_th=K_TH,
     ax.set_xlabel(r"Re-uploading depth $L$")
     ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle \mathcal{M}\rangle]$")
     ax.set_xticks(depths)
+    plotting.unify_grid(ax)                                # major decade grid, no minor lines
     plotting.top_legend(ax, ncol=2)
     plotting.save(fig, "reuploading_depth")
     np.savez(DATA_DIR / "reuploading_depth.npz", depths=depths, od_unif=od_unif, od_clus=od_clus,

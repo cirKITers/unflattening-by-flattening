@@ -12,7 +12,7 @@ import matplotlib
 matplotlib.use("Agg")  # PNG previews; PGF written per-save via backend="pgf"
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
-from matplotlib.ticker import LogLocator, NullLocator  # noqa: E402
+from matplotlib.ticker import LogLocator  # noqa: E402
 
 _CODE_DIR = Path(__file__).resolve().parents[2]
 FIG_DIR = _CODE_DIR / "figures"
@@ -99,11 +99,25 @@ def ordinal_colors(k):
     return [_ORDINAL_CMAP(i / (k - 1) if k > 1 else 0.0) for i in range(k)]
 
 
-def sparse_ylog(ax):
-    """Log y-axis with major ticks only at even decades (10^0, 10^-2, 10^-4, ...)
-    and no minor gridlines, to thin out the default dense log grid."""
-    ax.yaxis.set_major_locator(LogLocator(base=100.0))
-    ax.yaxis.set_minor_locator(NullLocator())
+def unify_grid(ax, *twins):
+    """Consistent grid for the paper's log panels: major gridlines only (one per decade
+    on a log axis, at the major ticks on a linear axis) and no minor gridlines, on the
+    primary ``ax``.  Any twin/secondary axes get ticks and labels but no gridlines: the
+    secondary scale is not a fixed rescaling of the primary (Var/P differs per curve and
+    per n, and |Omega| is unrelated to the purity), so a shared gridline would imply a
+    correspondence that does not exist.
+
+    The log y-axis uses an every-other-decade locator so the horizontal-line density is
+    the same on every panel regardless of its span (the default locator auto-thins by
+    axis height, which makes narrow panels denser than wide ones)."""
+    ax.minorticks_off()
+    if ax.get_yscale() == "log":
+        ax.yaxis.set_major_locator(LogLocator(base=100.0))
+    ax.grid(True, which="major")
+    ax.grid(False, which="minor")
+    for tw in twins:
+        tw.minorticks_off()
+        tw.grid(False)
 
 
 def top_legend(ax, handles=None, labels=None, ncol=None, **kw):

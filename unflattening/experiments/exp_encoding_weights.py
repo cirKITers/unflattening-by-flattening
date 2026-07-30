@@ -31,7 +31,7 @@ from math import comb
 import numpy as np
 
 from unflattening.utils import plotting
-from unflattening.utils.plotting import plt, DATA_DIR, GREY_REF
+from unflattening.utils.plotting import plt, DATA_DIR, GREY_REF, TEAL, ORANGE, ACCENT
 from unflattening.utils.purity import offdiag_closed_form, offdiag_uniform_mean
 
 from qml_essentials.ansaetze import Encoding
@@ -44,18 +44,15 @@ RAW_EPS = 0.03     # jitter of the clustered scalar input around {0, pi}
 SEED = 13
 TOL = 1e-9
 
-# ordered spectrum sweep equal < binary < ternary -> teal->blue->navy ramp
-# (ordinal_colors keeps BAD=orange reserved for the good/bad path).
-# Weights and spectrum sizes come from the qml-essentials Encoding strategies:
-# get_weights(n) -> hamming w_k=1, binary w_k=2^k, ternary w_k=3^k (phi_k = w_k x).
-_ENC_COLORS = plotting.ordinal_colors(3)
+# hamming=orange (the reserved BAD / collapsing path), binary=green (teal, good path),
+# ternary=blue (accent).  Weights and spectrum sizes come from the qml-essentials Encoding
+# strategies: get_weights(n) -> hamming w_k=1, binary w_k=2^k, ternary w_k=3^k (phi_k = w_k x).
 ENCODINGS = {
-    "hamming": (_ENC_COLORS[0], Encoding("hamming", ["RY"])),
-    "binary": (_ENC_COLORS[1], Encoding("binary", ["RY"])),
-    "ternary": (_ENC_COLORS[2], Encoding("ternary", ["RY"])),
+    "hamming": (ORANGE, Encoding("hamming", ["RY"])),
+    "binary": (TEAL, Encoding("binary", ["RY"])),
+    "ternary": (ACCENT, Encoding("ternary", ["RY"])),
 }
-_DISPLAY = {"hamming": "equal", "binary": "binary", "ternary": "ternary"}
-_LSTYLE = {  # ternary spans 3^n freqs: thin/faint/behind, equal on top
+_LSTYLE = {  # ternary spans 3^n freqs: thin/faint/behind, hamming on top
     "hamming": dict(alpha=0.9, lw=0.9, zorder=3),
     "binary": dict(alpha=0.8, lw=0.8, zorder=2),
     "ternary": dict(alpha=0.45, lw=0.4, zorder=1),
@@ -138,7 +135,7 @@ def part_landscape(n_qubits: int = N_QUBITS) -> None:
     figA, axA = plt.subplots(figsize=(plotting.COL, 2.2))
     for kind, (x, P) in land.items():
         axA.plot(x, np.maximum(P, 1e-4), "-", color=ENCODINGS[kind][0],
-                 label=_DISPLAY[kind], **_LSTYLE[kind])
+                 label=kind.capitalize(), **_LSTYLE[kind])
     axA.axhline(offdiag_uniform_mean(n_qubits), color=GREY_REF, ls=":", lw=0.9)
     axA.set_yscale("log")
     axA.set_ylim(1e-4, 12)
@@ -174,15 +171,31 @@ def part_mean(rng, ns=RANGE_QUBITS, n_samples: int = N_SAMPLES, raw_eps: float =
 
     figB, axB = plt.subplots(figsize=(plotting.COL, 2.5))
     for kind, (color, _) in ENCODINGS.items():
-        axB.plot(ns, mean_u[kind], "o-", color=color, ms=3, lw=1.1, label=_DISPLAY[kind])
+        axB.plot(ns, mean_u[kind], "o-", color=color, ms=3, lw=1.1, label=kind.capitalize())
         axB.plot(ns, np.maximum(mean_c[kind], 1e-7), "s--", color=color, ms=3, lw=1.1)
-    axB.plot(ns, iid, ":", color=GREY_REF, lw=1.3, zorder=0, label=r"iid mean")
-    axB.plot([], [], "o-", color="0.4", ms=3, lw=1.1, label=r"uniform $x$")
-    axB.plot([], [], "s--", color="0.4", ms=3, lw=1.1, label=r"clustered $x$")
+    axB.plot(ns, iid, ":", color=GREY_REF, lw=1.3, zorder=0, label=r"IID mean")
+    axB.plot([], [], "o-", color="0.4", ms=3, lw=1.1, label=r"Uniform $x$")
+    axB.plot([], [], "s--", color="0.4", ms=3, lw=1.1, label=r"Clustered $x$")
     axB.set_yscale("log")
     axB.set_xlabel("$n$ Qubits")
     axB.set_ylabel(r"$\mathbb{E}_x[P_{\mathfrak{g}}]$")
     axB.locator_params(axis="x", integer=True)
+
+    # spectrum size |Omega|(n) on the right axis (dotted): hamming 2n+1, binary 2^{n+1}-1,
+    # ternary 3^n (main_condensed eq:spectrum) -- ties the purity recovery to the encoding's
+    # frequency count.  Analytic closed forms (get_n_freqs would enumerate a 3^n set at n=14).
+    nsa = np.asarray(ns)
+    n_freqs = {"hamming": 2 * nsa + 1, "binary": 2 ** (nsa + 1) - 1, "ternary": 3 ** nsa}
+    for kind, (_, enc) in ENCODINGS.items():   # cheap cross-check of the closed forms at n=6
+        want = {"hamming": 2 * 6 + 1, "binary": 2 ** 7 - 1, "ternary": 3 ** 6}[kind]
+        assert enc.get_n_freqs(np.ones(6, dtype=bool)) == want, f"{kind}: |Omega| closed form vs get_n_freqs"
+    axf = axB.twinx()
+    for kind, (color, _) in ENCODINGS.items():
+        axf.plot(ns, n_freqs[kind], ":", color=color, lw=0.9, alpha=0.8)
+    axf.set_yscale("log")
+    axf.set_ylabel(r"number of frequencies $|\Omega|$")
+
+    plotting.unify_grid(axB, axf)                          # major decade grid on the primary axis only
     plotting.top_legend(axB, ncol=3)
     plotting.save(figB, "encoding_mean")
     np.savez(DATA_DIR / "encoding_mean.npz", ns=ns, iid=iid,

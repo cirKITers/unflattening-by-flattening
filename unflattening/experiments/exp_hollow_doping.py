@@ -200,13 +200,13 @@ def part_hollow_figures(rec, graph_fam, prof, sigma_points: int = SIGMA_POINTS
     Returns the sigma grid and the per-family sweeps for the caller to persist.
     """
     series = [
-        (r"off-diagonal chain ($d_Z{=}0$)", ACCENT, "o", True, "g_od",
+        (r"Off-diagonal chain ($d_Z{=}0$)", ACCENT, "o", True, "g_od",
          [(r[0], r[1]) for r in rec["g_od"]]),
-        (r"+ chord $(1,4)$, bipartite ($d_Z{=}0$)", TEAL, "o", True, "chord(1,4)",
+        (r"+ Chord $(1,4)$, bipartite ($d_Z{=}0$)", TEAL, "o", True, "chord(1,4)",
          [(r[0], r[1]) for r in graph_fam["chord(1,4)"]]),
         (r"+ $X_kY_{k+2}$, doped chain ($d_Z{=}0$)", NAVY, "o", True, "+XIY",
          [(r[0], r[1]) for r in rec["+XIY"]]),
-        (r"+ chord $(0,2)$, odd cycle ($d_Z{>}0$)", ORANGE, "o", False, "chord(0,2)",
+        (r"+ Chord $(0,2)$, odd cycle ($d_Z{>}0$)", ORANGE, "o", False, "chord(0,2)",
          [(r[0], r[1]) for r in graph_fam["chord(0,2)"]]),
     ]
     figd, a0 = plt.subplots(figsize=(plotting.COL, 2.6))  # dim growth -> appendix
@@ -230,7 +230,7 @@ def part_hollow_figures(rec, graph_fam, prof, sigma_points: int = SIGMA_POINTS
     a1.text(0.04, dZ * 1.6, rf"$d_Z={dZ}$", fontsize=7.5, color=GREY_REF)
     a1.set_xscale("log")
     a1.set_yscale("log")
-    plotting.sparse_ylog(a1)
+    plotting.unify_grid(a1)                                 # major decade grid, no minor lines
     a1.set_ylim(top=dZ * 6)
     a1.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
     a1.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
