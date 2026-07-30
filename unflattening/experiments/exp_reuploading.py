@@ -35,11 +35,10 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 
-from unflattening.utils import plotting
+from unflattening import figures
 from qml_essentials.model import Model
 from qml_essentials import operations as op
 from unflattening.utils.priors import sample_uniform, sample_clustered
-from unflattening.utils.plotting import plt, DATA_DIR, TEAL, ORANGE, ACCENT, NAVY
 
 N_QUBITS = 6              # qubits (statevector)
 DEPTHS = (1, 2, 3, 4, 6, 8)
@@ -130,26 +129,13 @@ def part_reuploading(rng, key, n_qubits=N_QUBITS, depths=DEPTHS, k_th=K_TH,
     assert mg_clus.mean(axis=1)[-1] > 0.2 * mg_unif.mean(axis=1)[-1], \
         "matchgate must stay distribution-insensitive under re-uploading"
 
-    fig, ax = plt.subplots(figsize=(plotting.COL, 2.5))
-    for dat, color, ls, label in (
-        (od_unif, TEAL, "-", r"Off-diag., uniform"),
-        (od_clus, ORANGE, "-", r"Off-diag., clustered"),
-        (mg_unif, ACCENT, "--", r"Matchgate, uniform"),
-        (mg_clus, NAVY, "--", r"Matchgate, clustered"),
-    ):
-        mean = dat.mean(axis=1)
-        lo, hi = np.quantile(dat, 0.1, axis=1), np.quantile(dat, 0.9, axis=1)
-        ax.plot(depths, mean, "o" + ls, color=color, ms=3.5, lw=1.1, label=label)
-        ax.fill_between(depths, lo, hi, color=color, alpha=0.15, lw=0)
-    ax.set_yscale("log")
-    ax.set_xlabel(r"Re-uploading depth $L$")
-    ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle \mathcal{M}\rangle]$")
-    ax.set_xticks(depths)
-    plotting.unify_grid(ax)                                # major decade grid, no minor lines
-    plotting.top_legend(ax, ncol=2)
-    plotting.save(fig, "reuploading_depth")
-    np.savez(DATA_DIR / "reuploading_depth.npz", depths=depths, od_unif=od_unif, od_clus=od_clus,
-             mg_unif=mg_unif, mg_clus=mg_clus, exact_zero_max=worst)
+    # long format, depth-major: one row per (depth, theta configuration); the figure
+    # takes the mean and the 10/90 quantiles over the k_th configurations.
+    figures.write_csv("reuploading_depth", dict(
+        depth=np.repeat(depths, k_th), theta_idx=np.tile(np.arange(k_th), len(depths)),
+        od_unif=od_unif.ravel(), od_clus=od_clus.ravel(),
+        mg_unif=mg_unif.ravel(), mg_clus=mg_clus.ravel(), exact_zero_max=worst))
+    figures.fig_reuploading_depth()
     print("saved reuploading_depth")
 
 

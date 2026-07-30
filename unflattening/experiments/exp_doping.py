@@ -25,10 +25,9 @@ from __future__ import annotations
 import jax
 import numpy as np
 
+from unflattening import figures
 from unflattening.utils import doping, dla
 from unflattening.utils.purity import analytic_loss_variance
-from unflattening.utils import plotting
-from unflattening.utils.plotting import plt, DATA_DIR, GREY_REF
 
 N_SAMPLES = 600
 TS = (0, 1, 2, 3, 4)           # non-Gaussian gate budgets
@@ -75,39 +74,13 @@ def part_doping(rng, key, ns=N_RANGE, ts=TS, n_samples=N_SAMPLES, n_rep=N_REP) -
     print(f"  fixed-n decay Var ~ c^-t: c ~ {c_fit:.3f} (mean over n)", flush=True)
 
     # save raw data BEFORE plotting so a backend hiccup cannot lose the run.
-    np.savez(DATA_DIR / "doping_variance.npz", n=ns, pred0=np.array(pred0),
-             **{f"var_t{t}": var[t] for t in ts},
-             slopes=np.array([slope[t] for t in ts]), ts=np.array(ts),
-             c_fit=c_fit, dim_mg=dim_mg, dim_doped=dim_doped)
+    figures.write_csv("doping_variance", dict(n=ns, pred0=np.array(pred0),
+                      **{f"var_t{t}": var[t] for t in ts},
+                      c_fit=c_fit, dim_mg=dim_mg, dim_doped=dim_doped))
+    figures.write_csv("doping_variance_fits",
+                      dict(t=np.array(ts), slope=np.array([slope[t] for t in ts])))
 
-    fig, (a0, a1) = plt.subplots(1, 2, figsize=(plotting.WIDE, 2.7))
-    # (a) Var vs n per fixed t; t=0 is the matchgate baseline ~ 1/n.
-    # sequential cool ramp keyed to the ordinal doping count t (avoids the
-    # BAD=orange bleed and the colour reuse of a wrapping categorical cycle).
-    tcolors = plotting.ordinal_colors(len(ts))
-    for j, t in enumerate(ts):
-        a0.plot(ns, var[t], "o-", color=tcolors[j],
-                label=f"$t={t}$" + (" (mg)" if t == 0 else ""))
-    a0.plot(ns, var[0][0] * ns[0] / ns, ":", color=GREY_REF, label=r"$\propto 1/n$")
-    a0.set_xscale("log"); a0.set_yscale("log")
-    a0.set_xlabel("$n$ Qubits")
-    a0.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
-    a0.legend(loc="lower left", ncol=2, fontsize=8)
-    # (b) fixed-n decay in t: Var ~ c^{-t} (Eq. doping-decay), rate ~ n-independent.
-    idx = list(ns.astype(int))
-    reps = [k for k in (6, 8, 10) if k in idx] or [idx[-1]]
-    for k in reps:
-        i = idx.index(k)
-        a1.semilogy(ts, [var[t][i] for t in ts], "o-", label=f"$n={k}$")
-    a1.semilogy(ts, var[0][idx.index(reps[-1])] * c_fit ** (-np.array(ts, float)),
-                "k--", lw=1.0, label=rf"$\propto c^{{-t}}$ ($c\approx{c_fit:.2f}$)")
-    a1.set_xlabel("non-Gaussian gates $t$")
-    a1.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
-    a1.set_xticks(ts)
-    a1.set_title(f"DLA dim {dim_mg}" + r"$\,\to\,$" + f"{dim_doped} (1 ZZ gate)",
-                 fontsize=8.5)
-    a1.legend(loc="lower left", fontsize=8)
-    plotting.save(fig, "doping_variance")
+    figures.fig_doping_variance()
     print("doping: done", flush=True)
 
 

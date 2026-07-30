@@ -15,10 +15,9 @@ from __future__ import annotations
 
 import numpy as np
 
+from unflattening import figures
 from unflattening.utils import priors
 from unflattening.utils.purity import g_purity_closed_form
-from unflattening.utils import plotting
-from unflattening.utils.plotting import plt, DATA_DIR, GREY_FILL, TEAL, ORANGE, NAVY
 
 N_RANGE = tuple(range(2, 19))         # qubit counts for the mean check (matches the other n sweeps)
 N_SAMPLES = 4000                      # angle configurations per point
@@ -46,15 +45,9 @@ def part_mean(rng, ns=N_RANGE, m=N_SAMPLES):
     for n, e, a in zip(ns, emp, ana):
         print(f"    n={int(n):4d}  emp={e:9.4f}  analytic={a:9.4f}  rel.err={abs(e-a)/a:.2e}")
 
-    fig, ax = plt.subplots(figsize=(plotting.COL, 1.9))
-    ax.fill_between(ns, lo, hi, color=GREY_FILL, label="Proven Range")
-    ax.plot(ns, ana, "-", color=TEAL, label=r"$n-1+2^{-n}$ (analytic mean)")
-    ax.plot(ns, emp, "o", color=NAVY, label="Empirical Mean", zorder=5)
-    ax.set_yscale("log")
-    ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
-    plotting.top_legend(ax, ncol=2)
-    plotting.save(fig, "uniform_prior_mean")
-    np.savez(DATA_DIR / "uniform_prior_mean.npz", n=ns, empirical=emp, analytic=ana)
+    figures.write_csv("uniform_prior_mean", dict(n=ns, empirical=emp, analytic=ana,
+                                                lo=lo, hi=hi))
+    figures.fig_uniform_prior_mean()
 
 
 def part_preconditioning(rng, n=N_POLAR, m=N_SAMPLES, rho=ANISO_RHO):
@@ -70,19 +63,15 @@ def part_preconditioning(rng, n=N_POLAR, m=N_SAMPLES, rho=ANISO_RHO):
     print(f"  polar (n={n}): E[P_g] raw={pg_raw:.3f}  preconditioned={pg_pre:.3f}  "
           f"uniform={pg_uni:.3f}  (analytic {analytic_mean(n):.3f})")
 
-    fig, ax = plt.subplots(figsize=(plotting.COL, 1.9))
+    # persist the binned densities (what the figure's step outline actually draws)
+    # rather than the 2 x m*n raw angles.
     bins = np.linspace(0, 2 * np.pi, 40)
-    ax.hist(raw.ravel(), bins=bins, density=True, histtype="step", color=ORANGE,
-            label="Raw")
-    ax.hist(pre.ravel(), bins=bins, density=True, histtype="step", color=TEAL,
-            label="Preconditioned")
-    ax.set_xlabel(r"Polar Angle $\phi$"); ax.set_ylabel("Density")
-    ax.set_xlim(0, 2 * np.pi)
-    ax.set_xticks(np.linspace(0, 2 * np.pi, 5))
-    ax.set_xticklabels(["$0$", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"])
-    ax.set_ylim(bottom=0)
-    plotting.top_legend(ax, ncol=2)
-    plotting.save(fig, "preconditioning_effect")
+    dens_raw, _ = np.histogram(raw.ravel(), bins=bins, density=True)
+    dens_pre, _ = np.histogram(pre.ravel(), bins=bins, density=True)
+    figures.write_csv("preconditioning_effect",
+                      dict(bin_left=bins[:-1], bin_right=bins[1:],
+                           density_raw=dens_raw, density_pre=dens_pre))
+    figures.fig_preconditioning_effect()
 
 
 def main() -> None:

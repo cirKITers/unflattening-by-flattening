@@ -30,8 +30,8 @@ from math import comb
 
 import numpy as np
 
-from unflattening.utils import plotting
-from unflattening.utils.plotting import plt, DATA_DIR, GREY_REF, TEAL, ORANGE, ACCENT
+from unflattening import figures
+from unflattening.utils.plotting import TEAL, ORANGE, ACCENT
 from unflattening.utils.purity import offdiag_closed_form, offdiag_uniform_mean
 
 from qml_essentials.ansaetze import Encoding
@@ -132,20 +132,13 @@ def part_landscape(n_qubits: int = N_QUBITS) -> None:
         x = np.arange(m) * 2 * np.pi / m
         land[kind] = (x, offdiag_closed_form(x[:, None] * w[None, :]))
 
-    figA, axA = plt.subplots(figsize=(plotting.COL, 2.2))
-    for kind, (x, P) in land.items():
-        axA.plot(x, np.maximum(P, 1e-4), "-", color=ENCODINGS[kind][0],
-                 label=kind.capitalize(), **_LSTYLE[kind])
-    axA.axhline(offdiag_uniform_mean(n_qubits), color=GREY_REF, ls=":", lw=0.9)
-    axA.set_yscale("log")
-    axA.set_ylim(1e-4, 12)
-    axA.set_xlim(0, 2 * np.pi)
-    axA.set_xticks([0, np.pi, 2 * np.pi])
-    axA.set_xticklabels(["$0$", r"$\pi$", r"$2\pi$"])
-    axA.set_xlabel(r"Scalar input $x$")
-    axA.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{w}x))$")
-    plotting.top_legend(axA, ncol=3)
-    plotting.save(figA, "encoding_landscape")
+    # long format: the three landscapes have different Nyquist grid sizes.
+    figures.write_csv("encoding_landscape", dict(
+        encoding=[k for k, (x, _) in land.items() for _ in x],
+        x=np.concatenate([x for x, _ in land.values()]),
+        purity=np.concatenate([P for _, P in land.values()]),
+        uniform_mean=offdiag_uniform_mean(n_qubits)))
+    figures.fig_encoding_landscape()
 
 
 def part_mean(rng, ns=RANGE_QUBITS, n_samples: int = N_SAMPLES, raw_eps: float = RAW_EPS) -> None:
@@ -169,38 +162,16 @@ def part_mean(rng, ns=RANGE_QUBITS, n_samples: int = N_SAMPLES, raw_eps: float =
     assert mean_c["binary"][-1] > 100 * mean_c["hamming"][-1], \
         "binary weights amplify jitter and partially recover"
 
-    figB, axB = plt.subplots(figsize=(plotting.COL, 2.5))
-    for kind, (color, _) in ENCODINGS.items():
-        axB.plot(ns, mean_u[kind], "o-", color=color, ms=3, lw=1.1, label=kind.capitalize())
-        axB.plot(ns, np.maximum(mean_c[kind], 1e-7), "s--", color=color, ms=3, lw=1.1)
-    axB.plot(ns, iid, ":", color=GREY_REF, lw=1.3, zorder=0, label=r"IID mean")
-    axB.plot([], [], "o-", color="0.4", ms=3, lw=1.1, label=r"Uniform $x$")
-    axB.plot([], [], "s--", color="0.4", ms=3, lw=1.1, label=r"Clustered $x$")
-    axB.set_yscale("log")
-    axB.set_xlabel("$n$ Qubits")
-    axB.set_ylabel(r"$\mathbb{E}_x[P_{\mathfrak{g}}]$")
-    axB.locator_params(axis="x", integer=True)
-
-    # spectrum size |Omega|(n) on the right axis (dotted): hamming 2n+1, binary 2^{n+1}-1,
-    # ternary 3^n (main_condensed eq:spectrum) -- ties the purity recovery to the encoding's
-    # frequency count.  Analytic closed forms (get_n_freqs would enumerate a 3^n set at n=14).
-    nsa = np.asarray(ns)
-    n_freqs = {"hamming": 2 * nsa + 1, "binary": 2 ** (nsa + 1) - 1, "ternary": 3 ** nsa}
-    for kind, (_, enc) in ENCODINGS.items():   # cheap cross-check of the closed forms at n=6
+    # cheap cross-check of the |Omega| closed forms the figure's right axis draws
+    # (get_n_freqs would enumerate a 3^n set at n=14, hence the closed forms there).
+    for kind, (_, enc) in ENCODINGS.items():
         want = {"hamming": 2 * 6 + 1, "binary": 2 ** 7 - 1, "ternary": 3 ** 6}[kind]
         assert enc.get_n_freqs(np.ones(6, dtype=bool)) == want, f"{kind}: |Omega| closed form vs get_n_freqs"
-    axf = axB.twinx()
-    for kind, (color, _) in ENCODINGS.items():
-        axf.plot(ns, n_freqs[kind], ":", color=color, lw=0.9, alpha=0.8)
-    axf.set_yscale("log")
-    axf.set_ylabel(r"number of frequencies $|\Omega|$")
 
-    plotting.unify_grid(axB, axf)                          # major decade grid on the primary axis only
-    plotting.top_legend(axB, ncol=3)
-    plotting.save(figB, "encoding_mean")
-    np.savez(DATA_DIR / "encoding_mean.npz", ns=ns, iid=iid,
-             **{f"u_{k}": mean_u[k] for k in ENCODINGS},
-             **{f"c_{k}": mean_c[k] for k in ENCODINGS})
+    figures.write_csv("encoding_mean", dict(n=ns, iid=iid,
+                      **{f"u_{k}": mean_u[k] for k in ENCODINGS},
+                      **{f"c_{k}": mean_c[k] for k in ENCODINGS}))
+    figures.fig_encoding_mean()
     for kind, (_, enc) in ENCODINGS.items():
         # get_n_freqs takes the (n_qubits,) reupload mask: one fully-reuploaded layer
         mask = np.ones(ns[-1], dtype=bool)

@@ -40,10 +40,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from unflattening.utils import plotting
+from unflattening import figures
 from unflattening.utils.dla import random_dla_variance, pauli_to_bitmasks, word_matrix
-from unflattening.utils.plotting import (ACCENT, ORANGE, DATA_DIR, TEAL, GREY_REF, NAVY,
-                              plt)
 from unflattening.utils.purity import product_state
 
 POP = np.bitwise_count
@@ -189,56 +187,16 @@ def validate_variance(n: int, rng: np.random.Generator, M: int = M_VARIANCE,
     return rows, dims
 
 
-def part_hollow_figures(rec, graph_fam, prof, sigma_points: int = SIGMA_POINTS
-                        ) -> tuple[np.ndarray, dict]:
-    """fig:hollow -- split into two column-width figures.
+def part_hollow_sweeps(prof, sigma_points: int = SIGMA_POINTS) -> tuple[np.ndarray, dict, int]:
+    """Exact regime sweep E[P_g](sigma) per family, for fig:hollow's results panel.
 
-    hollow_dimension (appendix): DLA growth. hollow_sweep (results):
-    purity_regime_contrast-style regime sweep at n = 8.
-    rec rows: (n, dim, dZ, nonbil, meanP); graph_fam rows: (n, dim, dZ, meanP);
-    prof: family -> (nx, nz) profile of the n = 8 basis for the exact sweep.
-    Returns the sigma grid and the per-family sweeps for the caller to persist.
+    prof: family -> (nx, nz) profile of the n = 8 basis.  Also returns d_Z of the
+    floored family, the level the sweep flattens out at (annotated in the figure).
     """
-    series = [
-        (r"Off-diagonal chain ($d_Z{=}0$)", ACCENT, "o", True, "g_od",
-         [(r[0], r[1]) for r in rec["g_od"]]),
-        (r"+ Chord $(1,4)$, bipartite ($d_Z{=}0$)", TEAL, "o", True, "chord(1,4)",
-         [(r[0], r[1]) for r in graph_fam["chord(1,4)"]]),
-        (r"+ $X_kY_{k+2}$, doped chain ($d_Z{=}0$)", NAVY, "o", True, "+XIY",
-         [(r[0], r[1]) for r in rec["+XIY"]]),
-        (r"+ Chord $(0,2)$, odd cycle ($d_Z{>}0$)", ORANGE, "o", False, "chord(0,2)",
-         [(r[0], r[1]) for r in graph_fam["chord(0,2)"]]),
-    ]
-    figd, a0 = plt.subplots(figsize=(plotting.COL, 2.6))  # dim growth -> appendix
-    figs, a1 = plt.subplots(figsize=(plotting.COL, 2.2))  # regime sweep -> results
     sigmas = np.logspace(np.log10(0.03), np.log10(np.pi), sigma_points)
-    sweeps = {}
-    for label, col, mk, hollow, key, rows in series:
-        fill = dict() if hollow else dict(markerfacecolor="white")
-        a0.semilogy([r[0] for r in rows], [r[1] for r in rows], mk + "-",
-                    color=col, label=label, **fill)
-        sweeps[key] = sweep_purity(*prof[key], sigmas)
-        a1.plot(sigmas, sweeps[key], mk + "-", color=col, label=label, ms=3.5, **fill)
-    a0.set_xlabel("$n$ Qubits")
-    a0.set_ylabel(r"$\dim\mathfrak{g}$")
-    a0.legend(loc="upper left", fontsize=7.5)
-    plotting.save(figd, "hollow_dimension")
-    # regime sweep at n=8 (cf. purity_regime_contrast): the floored family levels off at
-    # its diagonal count d_Z, the hollow families collapse to exactly 0.
-    dZ = int(np.sum(prof["chord(0,2)"][0] == 0))
-    a1.axhline(dZ, color=GREY_REF, ls=":", lw=0.9)
-    a1.text(0.04, dZ * 1.6, rf"$d_Z={dZ}$", fontsize=7.5, color=GREY_REF)
-    a1.set_xscale("log")
-    a1.set_yscale("log")
-    plotting.unify_grid(a1)                                 # major decade grid, no minor lines
-    a1.set_ylim(top=dZ * 6)
-    a1.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
-    a1.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
-    a1.legend(loc="lower right", fontsize=7.5, handlelength=1.2, handletextpad=0.4,
-              borderaxespad=0.05, labelspacing=0.3,
-              frameon=True, framealpha=1.0, facecolor="white", edgecolor="none")
-    plotting.save(figs, "hollow_sweep")
-    return sigmas, sweeps
+    sweeps = {key: sweep_purity(*prof[key], sigmas)
+              for key in ("g_od", "chord(1,4)", "+XIY", "chord(0,2)")}
+    return sigmas, sweeps, int(np.sum(prof["chord(0,2)"][0] == 0))
 
 
 def matchgate_gens(n):
@@ -341,21 +299,31 @@ def basis_profiles(n: int = N_PROFILE) -> dict:
 def main() -> None:
     part_selfcheck()
     rec = part_dopant_scan()
-    graph_rows, graph_fam = part_graph_scan()
+    _, graph_fam = part_graph_scan()   # the per-family rows carry the same data, keyed
     var_rows = part_variance(np.random.default_rng(11))
 
-    # (D) figure: DLA growth + regime sweep (cf. purity_regime_contrast).
-    sigmas, sweeps = part_hollow_figures(rec, graph_fam, basis_profiles())
+    # (D) figures: DLA growth + regime sweep (cf. purity_regime_contrast).
+    sigmas, sweeps, d_z = part_hollow_sweeps(basis_profiles())
 
-    np.savez(
-        DATA_DIR / "hollow_doping.npz",
-        scan=np.array([(k, *r) for k, rows in rec.items() for r in rows], dtype=object),
-        graphs=np.array(graph_rows, dtype=object),
-        variance=np.array(var_rows, dtype=object),
-        sweep_sigma=sigmas,
-        sweep=np.array(list(sweeps.items()), dtype=object),
-        allow_pickle=True,
-    )
+    # long format throughout: one row per (family, n) for the two scans, one row per
+    # sigma for the sweep.  fig_hollow_dimension reads the two scans, fig_hollow_sweep
+    # the sweep.
+    scan = [(k, *r) for k, rows in rec.items() for r in rows]
+    figures.write_csv("hollow_scan", dict(
+        family=[r[0] for r in scan], n=[r[1] for r in scan], dim=[r[2] for r in scan],
+        d_z=[r[3] for r in scan], nonbil=[r[4] for r in scan], mean_p=[r[5] for r in scan]))
+    graphs = [(fam, *r) for fam, rows in graph_fam.items() for r in rows]
+    figures.write_csv("hollow_graphs", dict(
+        family=[r[0] for r in graphs], n=[r[1] for r in graphs], dim=[r[2] for r in graphs],
+        d_z=[r[3] for r in graphs], mean_p=[r[4] for r in graphs]))
+    figures.write_csv("hollow_variance", dict(
+        label=[r[0] for r in var_rows], analytic=[r[1] for r in var_rows],
+        empirical=[r[2] for r in var_rows],
+        n=N_VARIANCE, M=M_VARIANCE, depth=DEPTH_VARIANCE))
+    figures.write_csv("hollow_sweep", dict(sigma=sigmas, **sweeps, d_z=d_z))
+
+    figures.fig_hollow_dimension()
+    figures.fig_hollow_sweep()
     print("hollow_doping: done", flush=True)
 
 

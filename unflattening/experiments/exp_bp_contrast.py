@@ -20,9 +20,8 @@ import numpy as np
 
 from qml_essentials.ansaetze import Ansaetze
 from qml_essentials import trainability
+from unflattening import figures
 from unflattening.utils.purity import analytic_loss_variance
-from unflattening.utils import plotting
-from unflattening.utils.plotting import plt, DATA_DIR, GREY_REF, TEAL, ORANGE
 
 N_SAMPLES = 2500          # random W draws per n
 N_RANGE = tuple(range(2, 10))  # qubit sweep
@@ -57,22 +56,11 @@ def part_contrast(rng, key, ns=N_RANGE, n_samples=N_SAMPLES) -> None:
     print(f"  matchgate log-log slope={poly_slope:.2f} (poly);  "
           f"Strongly_Entangling log-Var vs n slope={exp_rate:.2f} (exp decay)")
 
-    fig, ax = plt.subplots(figsize=(plotting.COL, 2.6))
-    # Same input rho(Theta) and observable Z_i; only the ansatz DLA differs.
-    # matchgate hugs the 1/n guide (polynomial); the full-DLA ansatz follows the
-    # exponential fit -- the conditional reading of Eq. (ragone) in one panel.
-    ax.plot(ns, var_mg, "o-", color=TEAL, label="MGA (Poly DLA)")
-    ax.plot(ns, var_ge, "s-", color=ORANGE, label="SEA (Full DLA)")
-    ax.plot(ns, var_mg[0] * ns[0] / ns, ":", color=GREY_REF, label=r"$\propto 1/n$")
-    ax.plot(ns, np.exp(np.polyval([exp_rate, np.log(var_ge[0]) - exp_rate * ns[0]], ns)),
-            "--", color=ORANGE, lw=0.9, label=f"$\\propto e^{{{exp_rate:.2f}\\,n}}$")
-    ax.set_yscale("log")
-    ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
-    ax.locator_params(axis="x", integer=True)
-    plotting.top_legend(ax, ncol=2)
-    plotting.save(fig, "dla_regime_contrast")
-    np.savez(DATA_DIR / "dla_regime_contrast.npz", n=ns, matchgate=var_mg, generic=var_ge,
-             pred_matchgate=np.array(pred_mg), poly_slope=poly_slope, exp_rate=exp_rate)
+    figures.write_csv("dla_regime_contrast",
+                      dict(n=ns, matchgate=var_mg, generic=var_ge,
+                           pred_matchgate=np.array(pred_mg), poly_slope=poly_slope,
+                           exp_rate=exp_rate))
+    figures.fig_dla_regime_contrast()
     print("bp_contrast: done")
 
 

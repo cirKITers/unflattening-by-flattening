@@ -17,13 +17,11 @@ from __future__ import annotations
 
 import jax
 import numpy as np
-from matplotlib.ticker import LogFormatterSciNotation
 
 from qml_essentials.ansaetze import Ansaetze
 from qml_essentials import trainability
+from unflattening import figures
 from unflattening.utils.purity import analytic_loss_variance
-from unflattening.utils import plotting
-from unflattening.utils.plotting import plt, DATA_DIR, GREY_FILL, TEAL, ACCENT, NAVY
 
 N_SAMPLES = 2000
 CONV_RANGE = (4, 6, 8)                        # qubit counts for the convergence panel
@@ -34,10 +32,9 @@ SCALING_DEPTH_FACTOR = 6                      # depth = SCALING_DEPTH_FACTOR * n
 
 def part_convergence(rng, key, ns=CONV_RANGE, depths=CONV_DEPTHS, n_samples=N_SAMPLES):
     """Var_W -> P_g/dim g as the brickwork depth grows, at fixed n."""
-    series = (TEAL, ACCENT, NAVY)  # all trainable: cool gradient, no barren gold
-    fig, ax = plt.subplots(figsize=(plotting.COL, 2.6))
+    col_n, col_depth, col_var, col_pred = [], [], [], []
     print("  convergence Var_W -> P_g/dim_g:")
-    for j, n in enumerate(ns):
+    for n in ns:
         theta = rng.uniform(0.0, 2 * np.pi, n)
         pred = analytic_loss_variance(theta)
         vs = []
@@ -49,18 +46,14 @@ def part_convergence(rng, key, ns=CONV_RANGE, depths=CONV_DEPTHS, n_samples=N_SA
             )
             vs.append(v)
         print(f"    n={n}: pred={pred:.5f}  Var(depth={depths[-1]})={vs[-1]:.5f}")
-        ax.plot(depths, vs, "o-", color=series[j], label=f"$n={n}$")
-        ax.axhline(pred, color=series[j], ls="--", lw=1.0,
-                   label=(r"$P_{\mathfrak{g}}/\dim\mathfrak{g}$" if j == 0 else None))
-    ax.set_xscale("log", base=2); ax.set_yscale("log")
-    ax.set_xlabel("MGA Depth")
-    ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
-    # legend with the analytic entry first
-    handles, labels = ax.get_legend_handles_labels()
-    ai = labels.index(r"$P_{\mathfrak{g}}/\dim\mathfrak{g}$")
-    order = [ai] + [i for i in range(len(labels)) if i != ai]
-    plotting.top_legend(ax, [handles[i] for i in order], [labels[i] for i in order])
-    plotting.save(fig, "matchgate_convergence")
+        col_n += [n] * len(depths)          # long format, n-major: one group per n
+        col_depth += list(depths)
+        col_var += vs
+        col_pred += [pred] * len(depths)    # the analytic level is per n
+
+    figures.write_csv("matchgate_convergence",
+                      dict(depth=col_depth, n=col_n, var=col_var, pred=col_pred))
+    figures.fig_matchgate_convergence()
 
 
 def part_scaling(rng, key, ns=SCALING_RANGE, n_samples=N_SAMPLES,
@@ -87,20 +80,9 @@ def part_scaling(rng, key, ns=SCALING_RANGE, n_samples=N_SAMPLES,
     slope = np.polyfit(np.log(ns), np.log(emp), 1)[0]
     print(f"  log-log slope of empirical Var vs n: {slope:.3f}  (Theorem 1: -1)")
 
-    fig, ax = plt.subplots(figsize=(plotting.COL, 2.6))
-    ax.fill_between(ns, lo, hi, color=GREY_FILL, label="Proven Range")
-    ax.plot(ns, pred, "-", color=TEAL, label=r"$P_{\mathfrak{g}}/\dim\mathfrak{g}$")
-    ax.plot(ns, emp, "o", color=NAVY, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$", zorder=5)
-    ax.set_xscale("log", base=2); ax.set_yscale("log")
-    # match the y-ticks of matchgate_convergence: label only {6e-2, 1e-1, 2e-1, 3e-1}
-    ax.set_yticks([6e-2, 1e-1, 2e-1, 3e-1])
-    ax.set_yticks([], minor=True)
-    ax.yaxis.set_major_formatter(LogFormatterSciNotation())
-    ax.set_xlabel("$n$ Qubits")
-    ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
-    plotting.top_legend(ax, ncol=3)
-    plotting.save(fig, "matchgate_scaling")
-    np.savez(DATA_DIR / "matchgate_scaling.npz", n=ns, empirical=emp, analytic=pred, slope=slope)
+    figures.write_csv("matchgate_scaling", dict(n=ns, empirical=emp, analytic=pred,
+                                               lo=lo, hi=hi, slope=slope))
+    figures.fig_matchgate_scaling()
 
 
 def main() -> None:

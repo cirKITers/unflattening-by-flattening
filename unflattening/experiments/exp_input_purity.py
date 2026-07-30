@@ -27,8 +27,7 @@ from qml_essentials import trainability
 from unflattening.utils.dla import matchgate_basis
 from qml_essentials.states import haar_state
 from unflattening.utils.purity import product_state, analytic_loss_variance, g_purity_from_basis
-from unflattening.utils import plotting
-from unflattening.utils.plotting import plt, DATA_DIR, GREY_REF, TEAL, ORANGE
+from unflattening import figures
 
 N_SAMPLES = 2000   # random W draws per input
 N_INPUTS = 8      # Haar input draws per n
@@ -88,20 +87,12 @@ def part_input_purity(rng, key, ns=N_RANGE, n_samples=N_SAMPLES, n_inputs=N_INPU
     ilast = len(ns) - 1
     assert var_haar[ilast] < 0.1 * var_prod[ilast], "Haar Var must collapse below product"
 
-    fig, ax = plt.subplots(figsize=(plotting.COL, 2.6))
-    # Same matchgate DLA (dim g = n(2n-1)) and readout Z_i; only the input differs.
-    ax.plot(ns, var_prod, "-", color=TEAL, label=r"Product $\rho(\boldsymbol{\phi})$")
-    ax.plot(ns, var_haar, "-", color=ORANGE, label="Haar Input")
-    ax.plot(ns, var_prod[0] * ns[0] / ns, ":", color=GREY_REF, label=r"$\propto 1/n$")
-    ax.plot(ns, 1.0 / (2**ns + 1), "--", color=ORANGE, lw=0.9, label=r"$1/(2^n+1)$")
-    ax.set_yscale("log")
-    ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
-    ax.locator_params(axis="x", integer=True)
-    plotting.top_legend(ax, ncol=2)
-    plotting.save(fig, "input_purity_scaling")
-    np.savez(DATA_DIR / "input_purity_scaling.npz", n=ns, var_product=var_prod, var_haar=var_haar,
-             pg_product=pg_prod, pg_haar=pg_haar, pred_product=np.array(pred_prod),
-             pred_haar=np.array(pred_haar), poly_slope=poly_slope, exp_rate=exp_rate)
+    figures.write_csv("input_purity_scaling",
+                      dict(n=ns, var_product=var_prod, var_haar=var_haar,
+                           pg_product=pg_prod, pg_haar=pg_haar,
+                           pred_product=np.array(pred_prod), pred_haar=np.array(pred_haar),
+                           poly_slope=poly_slope, exp_rate=exp_rate))
+    figures.fig_input_purity_scaling()
     print("input_purity: done")
 
 

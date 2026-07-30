@@ -35,11 +35,10 @@ from qml_essentials import operations as op
 from qml_essentials.model import Model
 from qml_essentials.coefficients import Coefficients
 
-from unflattening.utils import plotting
+from unflattening import figures
 from unflattening.utils.dla import lie_closure_paulis, xx_yy_generators
 from unflattening.utils.purity import product_state, g_purity_from_basis
 from unflattening.utils.priors import sample_uniform, sample_raw
-from unflattening.utils.plotting import plt, DATA_DIR, TEAL, ORANGE
 
 N_QUBITS = 6            # qubits
 DEPTH = 10       # reuploading XX+YY layers
@@ -193,47 +192,19 @@ def part_figure(stacks, diagnostics, targets, dim_g: int, epochs: int = EPOCHS,
     assert gv_pre[0] > 50 * gv_raw[0], "preconditioned must start with far larger gradient variance"
 
     epoch_axis = np.arange(1, epochs + 1)
-    fig, ax = plt.subplots(figsize=(plotting.COL, 2.6))
-    ax.plot(epoch_axis, rel_pre, "-", color=TEAL)
-    ax.fill_between(epoch_axis, np.clip(rel_pre - rel_pre_sd, 0, None), rel_pre + rel_pre_sd,
-                    color=TEAL, alpha=0.2, lw=0)
-    ax.plot(epoch_axis, rel_raw, "-", color=ORANGE)
-    ax.fill_between(epoch_axis, np.clip(rel_raw - rel_raw_sd, 0, None), rel_raw + rel_raw_sd,
-                    color=ORANGE, alpha=0.2, lw=0)
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel(r"$\mathcal{L}/\mathcal{L}_0$")
-
-    # secondary axis: gradient variance Var[d_W L], the barren-plateau diagnostic
-    # (dashed).  Vanishing floor for raw throughout; for preconditioned it starts
-    # orders of magnitude higher and decays only as the loss converges.  Bands are
-    # geometric mean +/- std over the initialisations.
-    ax2 = ax.twinx()
-    ax2.grid(False)
-    ax2.plot(epoch_axis, gv_pre, "--", color=TEAL, lw=0.9)
-    ax2.fill_between(epoch_axis, gv_pre_lo, gv_pre_hi, color=TEAL, alpha=0.15, lw=0)
-    ax2.plot(epoch_axis, gv_raw, "--", color=ORANGE, lw=0.9)
-    ax2.fill_between(epoch_axis, gv_raw_lo, gv_raw_hi, color=ORANGE, alpha=0.15, lw=0)
-    ax2.set_yscale("log")
-    ax2.set_ylabel(r"$\mathrm{Var}[\partial_{\boldsymbol{\theta}} \mathcal{L}]$")
-
-    # legend outside on top (as in fig8/fig9): colour = input law, style = quantity.
-    from matplotlib.lines import Line2D
-    handles = [Line2D([], [], color=TEAL, ls="-", label="Preconditioned"),
-               Line2D([], [], color=ORANGE, ls="-", label="Raw"),
-               Line2D([], [], color="0.4", ls="-", label=r"Loss $\mathcal{L}/\mathcal{L}_0$"),
-               Line2D([], [], color="0.4", ls="--", label="Grad. Var.")]
-    plotting.top_legend(ax, handles=handles,
-                        labels=[h.get_label() for h in handles], ncol=2)
-    plotting.save(fig, "precondition_training")
-    np.savez(DATA_DIR / "precondition_training.npz", epochs=epoch_axis,
-             rel_pre=rel_pre, rel_raw=rel_raw, rel_pre_sd=rel_pre_sd, rel_raw_sd=rel_raw_sd,
-             gradvar_pre=gv_pre, gradvar_raw=gv_raw,
-             gradvar_pre_lo=gv_pre_lo, gradvar_pre_hi=gv_pre_hi,
-             gradvar_raw_lo=gv_raw_lo, gradvar_raw_hi=gv_raw_hi,
-             rel_pre_seeds=rel_pre_s, rel_raw_seeds=rel_raw_s,
-             gradvar_pre_seeds=gv_pre_s, gradvar_raw_seeds=gv_raw_s,
-             pg_pre=pg_pre, pg_raw=pg_raw, varW_pre=vw_pre, varW_raw=vw_raw,
-             dim_g=dim_g, n_seeds=n_seeds)
+    figures.write_csv("precondition_training", dict(
+        epoch=epoch_axis,
+        rel_pre=rel_pre, rel_pre_sd=rel_pre_sd, rel_raw=rel_raw, rel_raw_sd=rel_raw_sd,
+        gradvar_pre=gv_pre, gradvar_pre_lo=gv_pre_lo, gradvar_pre_hi=gv_pre_hi,
+        gradvar_raw=gv_raw, gradvar_raw_lo=gv_raw_lo, gradvar_raw_hi=gv_raw_hi,
+        pg_pre=pg_pre, pg_raw=pg_raw, varW_pre=vw_pre, varW_raw=vw_raw,
+        dim_g=dim_g, n_seeds=n_seeds))
+    # the per-seed curves behind the mean/band (kept as a record, not plotted)
+    figures.write_csv("precondition_training_seeds", dict(
+        seed=np.repeat(np.arange(n_seeds), epochs), epoch=np.tile(epoch_axis, n_seeds),
+        rel_pre=rel_pre_s.ravel(), rel_raw=rel_raw_s.ravel(),
+        gradvar_pre=gv_pre_s.ravel(), gradvar_raw=gv_raw_s.ravel()))
+    figures.fig_precondition_training()
     print("precondition_training: done")
 
 

@@ -22,13 +22,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from unflattening.utils import plotting
+from unflattening import figures
 from unflattening.utils.dla import lie_closure_paulis, matchgate_basis, xx_yy_generators
 from unflattening.utils.purity import (product_state, g_purity_from_basis,
                                        g_purity_closed_form, offdiag_closed_form,
                                        offdiag_uniform_mean)
 from unflattening.utils.priors import sample_uniform, sample_raw
-from unflattening.utils.plotting import plt, DATA_DIR, GREY_REF, TEAL, ORANGE, NAVY
 
 N_VALID = 6        # closed-form vs basis brute force up to here
 N_FIG = 18         # closed-form mean curve up to here
@@ -134,58 +133,12 @@ def part_purity(rng: np.random.Generator, n_max: int = N_FIG, n_brute: int = N_B
     assert mean_clus[-1] < 0.01 * mean_unif[-1], "clustered prior must collapse far below uniform"
     assert var_unif[-1] < var_unif[0], "uniform Var_W must fall (purity up, variance down ~ Theta(1/n))"
 
-    # Broken y-axis: the uniform band and the clustered band lie ~4 decades apart with
-    # empty middle decades on both the left (P_g) and right (Var) axes.  Split into an
-    # upper (uniform) and lower (clustered) panel sharing x, clip each curve to its band,
-    # and drop the middle so the two traces sit close across the break.
-    fig, (axhi, axlo) = plt.subplots(
-        2, 1, sharex=True, figsize=(plotting.COL, 2.6),
-        gridspec_kw={"height_ratios": [1, 1]})
-    fig.get_layout_engine().set(hspace=0.0, h_pad=0.02)    # close the broken-axis gap (todo: less whitespace)
-    for a in (axhi, axlo):
-        lbl = a is axhi                                    # legend handles from the upper panel only
-        a.plot(ns_b, mean_brute, "+", color=NAVY, ms=7, mew=1.4, zorder=5,
-               label="Brute-force basis" if lbl else None)
-        a.plot(ns, mean_unif, "-", color=TEAL, label="Uniform prior" if lbl else None)
-        a.plot(ns, mean_clus, "-", color=ORANGE, label="Clustered prior" if lbl else None)
-        a.set_yscale("log")
-    axhi.set_ylim(0.18, 8.0)                               # uniform band
-    axlo.set_ylim(5e-7, 1.2e-4)                            # clustered band
-
-    # proxy for the dashed variance curves; on axhi so top_legend(axhi) actually picks it up
-    axhi.plot([], [], "--", color=NAVY, lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")
-    axhi_v, axlo_v = axhi.twinx(), axlo.twinx()            # variance on the right axis (dashed)
-    for av in (axhi_v, axlo_v):
-        av.plot(ns, var_unif, "--", color=TEAL, lw=1.1)
-        av.plot(ns, var_clus, "--", color=ORANGE, lw=1.1)
-        av.set_yscale("log")
-    axhi_v.set_ylim(0.028, 0.32)                           # uniform var band
-    axlo_v.set_ylim(3.3e-7, 1.0e-6)                        # clustered var band
-    plotting.unify_grid(axhi, axhi_v)                      # major decade grid on the primary panels only
-    plotting.unify_grid(axlo, axlo_v)
-
-    for a in (axhi, axhi_v):                               # hide the inner (facing) spines and top-panel x ticks
-        a.spines["bottom"].set_visible(False)
-    for a in (axlo, axlo_v):
-        a.spines["top"].set_visible(False)
-    axhi.tick_params(axis="x", which="both", bottom=False)
-    d = 0.5                                                 # diagonal break marks at the cut
-    brk = dict(marker=[(-1, -d), (1, d)], markersize=7, linestyle="none",
-               color="k", mec="k", mew=1, clip_on=False)
-    axhi.plot([0, 1], [0, 0], transform=axhi.transAxes, **brk)
-    axlo.plot([0, 1], [1, 1], transform=axlo.transAxes, **brk)
-
-    axlo.set_xlabel("$n$ Qubits")
-    axlo.locator_params(axis="x", integer=True)
-    axlo.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
-    axlo.yaxis.set_label_coords(-0.19, 1.0)                # centre the shared label across the break, clear of the ticks
-    axlo_v.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2P_{\mathfrak{g}}/\dim\mathfrak{g}$")
-    axlo_v.yaxis.set_label_coords(1.16, 1.0)
-
-    plotting.top_legend(axhi, ncol=2)
-    plotting.save(fig, "offdiag_purity")
-    np.savez(DATA_DIR / "offdiag_purity.npz", n=ns, uniform=mean_unif, clustered=mean_clus,
-             analytic=ana, var_uniform=var_unif, var_clustered=var_clus, n_brute=ns_b, brute=mean_brute)
+    # ns_b is the leading prefix of ns, so the brute-force column is simply shorter
+    # than the rest of the table (tail-padded in the CSV).
+    figures.write_csv("offdiag_purity",
+                      dict(n=ns, uniform=mean_unif, clustered=mean_clus, analytic=ana,
+                           var_uniform=var_unif, var_clustered=var_clus, brute=mean_brute))
+    figures.fig_offdiag_purity()
 
 
 def part_regime(rng: np.random.Generator, n: int = N_REGIME,
@@ -208,27 +161,10 @@ def part_regime(rng: np.random.Generator, n: int = N_REGIME,
     assert var_mg.min() > 0.5 * var_mg.max(), "matchgate variance stays flat (floored)"
     assert var_od[0] < 0.05 * var_od[-1], "off-diagonal variance collapses (floor-free)"
 
-    fig, ax = plt.subplots(figsize=(plotting.COL, 1.9))    # flatter plot box, matches fig:hollow aspect
-    ax.axhline(n, color=GREY_REF, ls=":", lw=0.9)          # d_Z = n, matchgate clustered limit
-    ax.plot(sigmas, mg, "o-", color=TEAL, ms=3.5, label=r"Matchgate ($d_Z{=}n$)")
-    ax.plot(sigmas, od, "o-", color=ORANGE, ms=3.5, label=r"Off-diagonal ($d_Z{=}0$)")
-    ax.plot([], [], "--", color="0.35", lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")  # dashed = variance
-    ax.set_xscale("log")
-    ax.set_yscale("log")
-    ax.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
-    ax.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
-
-    axv = ax.twinx()                                       # loss variance on the right axis (dashed)
-    axv.plot(sigmas, var_mg, "--", color=TEAL, lw=1.1)
-    axv.plot(sigmas, var_od, "--", color=ORANGE, lw=1.1)
-    axv.set_yscale("log")
-    axv.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2P_{\mathfrak{g}}/\dim\mathfrak{g}$")
-
-    plotting.unify_grid(ax, axv)                            # major decade grid on the primary axis only
-    ax.legend(loc="lower right", fontsize=7.5)
-    plotting.save(fig, "purity_regime_contrast")
-    np.savez(DATA_DIR / "purity_regime_contrast.npz", sigma=sigmas, matchgate=mg, offdiag=od,
-             var_matchgate=var_mg, var_offdiag=var_od, n=n)
+    figures.write_csv("purity_regime_contrast",
+                      dict(sigma=sigmas, matchgate=mg, offdiag=od,
+                           var_matchgate=var_mg, var_offdiag=var_od, n=n))
+    figures.fig_purity_regime_contrast()
 
 
 def part_variance(rng: np.random.Generator, n: int = N_VARIANCE, M: int = M_VARIANCE,
@@ -255,9 +191,10 @@ def part_variance(rng: np.random.Generator, n: int = N_VARIANCE, M: int = M_VARI
               f"ratio(P/dim)={emp / (pg / dim):.2f}", flush=True)
     assert all(0.8 < e / p2 < 1.2 for _, p2, _, e in rows), \
         "empirical Var_theta must match the two-ideal 2 P_g/dim g"
-    np.savez(DATA_DIR / "offdiag_variance.npz",
-             rows=np.array(rows, dtype=object), n=n, M=M, depth=depth,
-             allow_pickle=True)
+    figures.write_csv("offdiag_variance",
+                      dict(label=[r[0] for r in rows], two_ideal=[r[1] for r in rows],
+                           single_ideal=[r[2] for r in rows], empirical=[r[3] for r in rows],
+                           n=n, M=M, depth=depth))
 
 
 def main() -> None:
