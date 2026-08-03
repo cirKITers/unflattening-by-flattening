@@ -54,6 +54,7 @@ DIM_CUTOFF = 20_000       # stop a dopant's scan once the closure exceeds this
 N_PROFILE = 8             # qubits whose basis profile drives the exact sweep
 N_VARIANCE = 6            # qubits for the statevector variance validation
 M_VARIANCE = 600          # random circuits in the variance validation
+M_SWEEP_VARIANCE = 800    # random circuits per family in the fig:hollow axis check
 DEPTH_VARIANCE = 2000     # rotations per random circuit
 SIGMA_POINTS = 24         # angle-spread grid points in the regime sweep
 # all sixteen TI dopants of range <= 3: 4 two-site NNN, 8 contiguous three-site,
@@ -277,23 +278,62 @@ def part_graph_scan(ns=GRAPH_RANGE, cap: int = GRAPH_CLOSURE_CAP) -> tuple[list,
     return graph_rows, graph_fam
 
 
+def validate_sweep_variance(n: int, rng: np.random.Generator, M: int = M_SWEEP_VARIANCE,
+                            depth: int = DEPTH_VARIANCE) -> list:
+    """Var = 2 P_g / dim g for the readout plotted on the right axis of fig:hollow.
+
+    X_1X_2 + Y_1Y_2 puts one basis string in each of the two equal-dimensional
+    ideals of every family here, so the variance is split-independent (the
+    appendix argument for g_od).  The single-string X_1X_2 is NOT: it weights
+    the two so(n) ideals of g_od unequally and lands ~26% low, which is why the
+    figure plots this readout instead.
+    """
+    path = [(k, k + 1) for k in range(n - 1)]
+    fams = {"g_od": offdiag_basis(n),
+            "chord(1,4)": xy_generators(path + [(1, 4)], n),
+            "+XIY": offdiag_basis(n) + translate_pattern("XIY", n),
+            "chord(0,2)": xy_generators(path + [(0, 2)], n)}
+    O = sum(word_matrix(*pauli_to_bitmasks(c + c + "I" * (n - 2)), n) for c in "XY")
+    psi = product_state(rng.uniform(0, 2 * np.pi, n))
+    rows = []
+    for name, gens in fams.items():
+        X, Z = capped_closure(gens)
+        P = sum(float(np.real(psi.conj() @ (word_matrix(int(a), int(b), n) @ psi))) ** 2
+                for a, b in zip(X, Z))
+        emp = random_dla_variance(psi, [word_matrix(a, b, n) for a, b in gens], O, depth, M, rng)
+        pred = 2 * P / len(X)
+        rows.append((name, pred, emp))
+        print(f"    {name:12s} dim={len(X):6d}  analytic={pred:.3e}  empirical={emp:.3e}"
+              f"  ratio={emp / pred:.2f}", flush=True)
+    ratios = [e / p for _, p, e in rows]
+    assert all(0.85 < r < 1.25 for r in ratios), ratios   # 2-design + sampling tolerance
+    return rows
+
+
 def part_variance(rng, n: int = N_VARIANCE) -> list:
     """(C) LASA two-ideal variance formula vs deep random statevector circuits."""
     print(f"\n(C) LASA two-ideal variance vs statevector, g_h at n={n}:")
     var_rows, ideal_dims = validate_variance(n, rng)
     print(f"    ideal dims {ideal_dims} (= so(2^{n - 1}) twice)")
+    # own seed: the manuscript quotes these ratios, so they must not depend on how
+    # many draws validate_variance happened to consume first.
+    print(f"  fig:hollow right axis, Var = 2 P_g/dim g at n={n}:")
+    validate_sweep_variance(n, np.random.default_rng(3))
     return var_rows
 
 
-def basis_profiles(n: int = N_PROFILE) -> dict:
-    """(nx, nz) profile of each family's n-qubit basis, for the exact regime sweep."""
+def basis_profiles(n: int = N_PROFILE) -> tuple[dict, dict]:
+    """(nx, nz) profile and dim g of each family's n-qubit basis, for the exact
+    regime sweep.  The dims carry the sweep's second axis Var = P_g / dim g."""
     path = [(k, k + 1) for k in range(n - 1)]
-    return {
-        "g_od": weight_profile(*capped_closure(offdiag_basis(n))),
-        "+XIY": weight_profile(*capped_closure(offdiag_basis(n) + translate_pattern("XIY", n))),
-        "chord(1,4)": weight_profile(*capped_closure(xy_generators(path + [(1, 4)], n))),
-        "chord(0,2)": weight_profile(*capped_closure(xy_generators(path + [(0, 2)], n))),
+    closures = {
+        "g_od": capped_closure(offdiag_basis(n)),
+        "+XIY": capped_closure(offdiag_basis(n) + translate_pattern("XIY", n)),
+        "chord(1,4)": capped_closure(xy_generators(path + [(1, 4)], n)),
+        "chord(0,2)": capped_closure(xy_generators(path + [(0, 2)], n)),
     }
+    return ({k: weight_profile(*XZ) for k, XZ in closures.items()},
+            {k: len(XZ[0]) for k, XZ in closures.items()})
 
 
 def main() -> None:
@@ -303,7 +343,8 @@ def main() -> None:
     var_rows = part_variance(np.random.default_rng(11))
 
     # (D) figures: DLA growth + regime sweep (cf. purity_regime_contrast).
-    sigmas, sweeps, d_z = part_hollow_sweeps(basis_profiles())
+    prof, dims = basis_profiles()
+    sigmas, sweeps, d_z = part_hollow_sweeps(prof)
 
     # long format throughout: one row per (family, n) for the two scans, one row per
     # sigma for the sweep.  fig_hollow_dimension reads the two scans, fig_hollow_sweep
@@ -320,7 +361,9 @@ def main() -> None:
         label=[r[0] for r in var_rows], analytic=[r[1] for r in var_rows],
         empirical=[r[2] for r in var_rows],
         n=N_VARIANCE, M=M_VARIANCE, depth=DEPTH_VARIANCE))
-    figures.write_csv("hollow_sweep", dict(sigma=sigmas, **sweeps, d_z=d_z))
+    figures.write_csv("hollow_sweep", dict(
+        sigma=sigmas, **sweeps, d_z=d_z,
+        **{f"dim_{k}": v for k, v in dims.items()}))
 
     figures.fig_hollow_dimension()
     figures.fig_hollow_sweep()
