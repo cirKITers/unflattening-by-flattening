@@ -128,13 +128,13 @@ def fig_matchgate_convergence() -> None:
         m = d["n"] == n
         ax.plot(d["depth"][m], d["var"][m], "o-", color=series[j], label=f"$n={int(n)}$")
         ax.axhline(float(d["pred"][m][0]), color=series[j], ls="--", lw=1.0,
-                   label=(r"$P_{\mathfrak{g}}/\dim\mathfrak{g}$" if j == 0 else None))
+                   label=(r"$\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$" if j == 0 else None))
     ax.set_xscale("log", base=2); ax.set_yscale("log")
     ax.set_xlabel("MGA Depth")
     ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
     # legend with the analytic entry first
     handles, labels = ax.get_legend_handles_labels()
-    ai = labels.index(r"$P_{\mathfrak{g}}/\dim\mathfrak{g}$")
+    ai = labels.index(r"$\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$")
     order = [ai] + [i for i in range(len(labels)) if i != ai]
     plotting.top_legend(ax, [handles[i] for i in order], [labels[i] for i in order])
     plotting.save(fig, "matchgate_convergence")
@@ -146,7 +146,7 @@ def fig_matchgate_scaling() -> None:
 
     fig, ax = plt.subplots(figsize=(plotting.COL, 2.6))
     ax.fill_between(ns, lo, hi, color=GREY_FILL, label="Proven Range")
-    ax.plot(ns, pred, "-", color=TEAL, label=r"$P_{\mathfrak{g}}/\dim\mathfrak{g}$")
+    ax.plot(ns, pred, "-", color=TEAL, label=r"$\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$")
     ax.plot(ns, emp, "o", color=NAVY, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$", zorder=5)
     ax.set_xscale("log", base=2); ax.set_yscale("log")
     # match the y-ticks of matchgate_convergence: label only {6e-2, 1e-1, 2e-1, 3e-1}
@@ -168,7 +168,7 @@ def fig_uniform_prior_mean() -> None:
     ax.plot(ns, ana, "-", color=TEAL, label=r"$n-1+2^{-n}$ (analytic mean)")
     ax.plot(ns, emp, "o", color=NAVY, label="Empirical Mean", zorder=5)
     ax.set_yscale("log")
-    ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
+    ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$\mathcal{P}_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
     plotting.top_legend(ax, ncol=2)
     plotting.save(fig, "uniform_prior_mean")
 
@@ -309,7 +309,7 @@ def fig_reuploading_depth() -> None:
         ax.fill_between(depths, lo, hi, color=color, alpha=0.15, lw=0)
     ax.set_yscale("log")
     ax.set_xlabel(r"Re-uploading depth $L$")
-    ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle \mathcal{M}\rangle]$")
+    ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle O\rangle]$")
     ax.set_xticks(depths)
     plotting.unify_grid(ax)                                # major decade grid, no minor lines
     plotting.top_legend(ax, ncol=2)
@@ -332,7 +332,7 @@ def fig_encoding_landscape() -> None:
     axA.set_xticks([0, np.pi, 2 * np.pi])
     axA.set_xticklabels(["$0$", r"$\pi$", r"$2\pi$"])
     axA.set_xlabel(r"Scalar input $x$")
-    axA.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{w}x))$")
+    axA.set_ylabel(r"$\mathcal{P}_{\mathfrak{g}}(\rho(\boldsymbol{w}x))$")
     plotting.top_legend(axA, ncol=3)
     plotting.save(figA, "encoding_landscape")
 
@@ -353,7 +353,7 @@ def fig_encoding_mean() -> None:
     axB.plot([], [], "s--", color="0.4", ms=3, lw=1.1, label=r"Clustered $x$")
     axB.set_yscale("log")
     axB.set_xlabel("$n$ Qubits")
-    axB.set_ylabel(r"$\mathbb{E}_x[P_{\mathfrak{g}}]$")
+    axB.set_ylabel(r"$\mathbb{E}_x[\mathcal{P}_{\mathfrak{g}}]$")
     axB.locator_params(axis="x", integer=True)
 
     # spectrum size |Omega|(n) on the right axis (dotted): hamming 2n+1, binary 2^{n+1}-1,
@@ -422,9 +422,9 @@ def fig_offdiag_purity() -> None:
 
     axlo.set_xlabel("$n$ Qubits")
     axlo.locator_params(axis="x", integer=True)
-    axlo.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
+    axlo.set_ylabel(r"$\mathcal{P}_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
     axlo.yaxis.set_label_coords(-0.19, 1.0)                # centre the shared label across the break, clear of the ticks
-    axlo_v.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2P_{\mathfrak{g}}/\dim\mathfrak{g}$")
+    axlo_v.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$")
     axlo_v.yaxis.set_label_coords(1.16, 1.0)
 
     plotting.top_legend(axhi, ncol=2)
@@ -445,13 +445,13 @@ def fig_purity_regime_contrast() -> None:
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
-    ax.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
+    ax.set_ylabel(r"$\mathcal{P}_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
 
     axv = ax.twinx()                                       # loss variance on the right axis (dashed)
     axv.plot(sigmas, var_mg, "--", color=TEAL, lw=1.1)
     axv.plot(sigmas, var_od, "--", color=ORANGE, lw=1.1)
     axv.set_yscale("log")
-    axv.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2P_{\mathfrak{g}}/\dim\mathfrak{g}$")
+    axv.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$")
 
     plotting.unify_grid(ax, axv)                            # major decade grid on the primary axis only
     ax.legend(loc="lower right", fontsize=7.5)
@@ -461,10 +461,10 @@ def fig_purity_regime_contrast() -> None:
 # hollow_dimension / hollow_sweep share this series definition: label, colour,
 # marker, hollow (filled marker) flag, and the family key used in both CSVs.
 _HOLLOW_SERIES = (
-    (r"Off-diagonal chain ($d_Z{=}0$)", ACCENT, "o", True, "g_od", "hollow_scan"),
-    (r"+ Chord $(1,4)$, bipartite ($d_Z{=}0$)", TEAL, "o", True, "chord(1,4)", "hollow_graphs"),
-    (r"+ $X_kY_{k+2}$, doped chain ($d_Z{=}0$)", NAVY, "o", True, "+XIY", "hollow_scan"),
-    (r"+ Chord $(0,2)$, odd cycle ($d_Z{>}0$)", ORANGE, "o", False, "chord(0,2)", "hollow_graphs"),
+    (r"Off-diagonal ($d_Z{=}0$)", ACCENT, "o", True, "g_od", "hollow_scan"),
+    (r"+ Bipartite ($d_Z{=}0$)", TEAL, "o", True, "chord(1,4)", "hollow_graphs"),
+    (r"+ Doped chain ($d_Z{=}0$)", NAVY, "o", True, "+XIY", "hollow_scan"),
+    (r"+ Odd cycle ($d_Z{>}0$)", ORANGE, "o", False, "chord(0,2)", "hollow_graphs"),
 )
 
 
@@ -491,21 +491,34 @@ def fig_hollow_sweep() -> None:
     sigmas = d["sigma"]
     dZ = int(d["d_z"][0])
 
-    figs, a1 = plt.subplots(figsize=(plotting.COL, 2.2))
+    figs, a1 = plt.subplots(figsize=(plotting.COL, 2.4))
     for label, col, mk, hollow, key, _ in _HOLLOW_SERIES:
         fill = dict() if hollow else dict(markerfacecolor="white")
         a1.plot(sigmas, d[key], mk + "-", color=col, label=label, ms=3.5, **fill)
     a1.axhline(dZ, color=GREY_REF, ls=":", lw=0.9)
     a1.text(0.04, dZ * 1.6, rf"$d_Z={dZ}$", fontsize=7.5, color=GREY_REF)
+    a1.plot([], [], "--", color="0.35", lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")
     a1.set_xscale("log")
     a1.set_yscale("log")
-    plotting.unify_grid(a1)                                 # major decade grid, no minor lines
     a1.set_ylim(top=dZ * 6)
     a1.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
-    a1.set_ylabel(r"$P_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
-    a1.legend(loc="lower right", fontsize=7.5, handlelength=1.2, handletextpad=0.4,
-              borderaxespad=0.05, labelspacing=0.3,
-              frameon=True, framealpha=1.0, facecolor="white", edgecolor="none")
+    a1.set_ylabel(r"$\mathcal{P}_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
+
+    # right axis: same readout and formula as purity_regime_contrast.  X_1X_2+Y_1Y_2
+    # places one basis string in each of the two equal-dimensional ideals of every
+    # family here, so Var = 2 P_g / dim g independently of how the purity splits
+    # (verified at n=6 vs random circuits: ratios 0.97/0.98/0.95/1.11).  Dividing by
+    # dim g exposes what the purity alone hides -- the exponential families sit at
+    # the 2^-n cap even where their purity is highest.
+    axv = a1.twinx()
+    for _, col, _, _, key, _ in _HOLLOW_SERIES:
+        axv.plot(sigmas, 2 * d[key] / d[f"dim_{key}"][0], "--", color=col, lw=1.1)
+    axv.set_yscale("log")
+    axv.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$")
+    plotting.unify_grid(a1, axv)                            # major decade grid on the primary axis only
+
+    plotting.top_legend(a1, ncol=2, fontsize=7.5, handlelength=1.2,
+                        handletextpad=0.4, labelspacing=0.3, columnspacing=1.0)
     plotting.save(figs, "hollow_sweep")
 
 

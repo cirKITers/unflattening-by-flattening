@@ -15,6 +15,7 @@ EXPERIMENTS = {
     "hollow_doping": ("exp_hollow_doping", "Outlook open question 1: hard floor-free (d_Z=0) families exist  [~10 min]"),
     "reuploading": ("exp_reuploading", "Appendix: dichotomy survives data re-uploading (exact zero at any depth)"),
     "encoding_weights": ("exp_encoding_weights", "Appendix: Hamming/binary/ternary weights, spectrum vs input distribution"),
+    "acceptance_rate": ("exp_acceptance_rate", "Appendix: empirical acceptance rate of the fixed-Q test"),
 }
 
 
