@@ -316,6 +316,179 @@ def fig_reuploading_depth() -> None:
     plotting.save(fig, "reuploading_depth")
 
 
+# latent_drift / latent_drift_hist styling (mirrors ARMS in exp_latent_drift, and
+# the colour assignment of fig_reuploading_depth: teal/orange = the off-diagonal
+# uniform/raw pair, blue/navy = the floored matchgate control).
+_DRIFT_SERIES = (
+    ("od_unif", TEAL, r"Off-diag., uniform"),
+    ("od_raw", ORANGE, r"Off-diag., raw"),
+    ("mg_unif", ACCENT, r"Matchgate, uniform"),
+    ("mg_raw", NAVY, r"Matchgate, raw"),
+)
+
+
+def _angle_axis(ax) -> None:
+    """x axis over one period in units of pi/2 (shared by the latent histograms)."""
+    ax.set_xlim(0, 2 * np.pi)
+    ax.set_xticks(np.linspace(0, 2 * np.pi, 5))
+    ax.set_xticklabels(["$0$", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"])
+
+
+def fig_latent_drift() -> None:
+    """Training of the MLP-preconditioned model: loss, the gradient variance split by
+    parameter group, and the dataset-averaged latent purity, all vs epoch."""
+    d = read_csv("latent_drift")
+    epoch = d["epoch"]
+    n, mu_n = int(d["n"][0]), float(d["mu_n"][0])
+
+    fig, (a0, a1, a2) = plt.subplots(3, 1, sharex=True, figsize=(plotting.COL, 5.0))
+    for key, color, label in _DRIFT_SERIES:
+        a0.plot(epoch, d[f"{key}_rel"], "-", color=color, label=label)
+        a0.fill_between(epoch, d[f"{key}_rel_lo"], d[f"{key}_rel_hi"],
+                        color=color, alpha=0.18, lw=0)
+        # solid = circuit parameters, dashed = the MLP, i.e. the signal that actually
+        # reaches the classical front end (exactly zero at clustered latents).
+        a1.plot(epoch, d[f"{key}_gvW"], "-", color=color, lw=1.0)
+        a1.fill_between(epoch, d[f"{key}_gvW_lo"], d[f"{key}_gvW_hi"],
+                        color=color, alpha=0.13, lw=0)
+        a1.plot(epoch, d[f"{key}_gvM"], "--", color=color, lw=0.9)
+        a2.plot(epoch, d[f"{key}_pur"], "-", color=color)
+        a2.fill_between(epoch, np.clip(d[f"{key}_pur"] - d[f"{key}_pur_sd"], 1e-30, None),
+                        d[f"{key}_pur"] + d[f"{key}_pur_sd"], color=color, alpha=0.18, lw=0)
+    # log: the arms span three decades of relative loss, and an early matchgate
+    # transient overshoots L_0 by more than an order of magnitude.
+    a0.set_yscale("log")
+    a0.set_ylabel(r"$\mathcal{L}/\mathcal{L}_0$")
+
+    a1.set_yscale("log")
+    a1.set_ylabel(r"$\mathrm{Var}[\partial \mathcal{L}]$")
+
+    # guides: the uniform-prior mean mu_n and the attainable maximum n-1 (all latents
+    # at pi/2).  A purity-seeking drift would run to the upper guide.
+    a2.axhline(mu_n, color=GREY_REF, ls=":", lw=0.9)
+    a2.axhline(n - 1, color=GREY_REF, ls=":", lw=0.9)
+    a2.text(epoch[0], mu_n, r"$\mu_n$", fontsize=7.5, color=GREY_REF,
+            ha="left", va="bottom")
+    a2.text(epoch[0], n - 1, "$n-1$", fontsize=7.5, color=GREY_REF,
+            ha="left", va="bottom")
+    a2.set_yscale("log")
+    a2.set_xlabel("Epoch")
+    a2.set_ylabel(r"$\hat{\mathcal{P}}(\boldsymbol{\phi})$")
+    plotting.unify_grid(a1)
+    plotting.unify_grid(a2)
+
+    from matplotlib.lines import Line2D
+    handles = [Line2D([], [], color=c, ls="-", label=lab) for _, c, lab in _DRIFT_SERIES]
+    handles += [Line2D([], [], color="0.4", ls="-", label="Circuit"),
+                Line2D([], [], color="0.4", ls="--", label="MLP")]
+    plotting.top_legend(a0, handles=handles, labels=[h.get_label() for h in handles],
+                        ncol=2, fontsize=7.5)
+    plotting.save(fig, "latent_drift")
+
+
+def fig_latent_drift_hist() -> None:
+    """The discriminator: per-site latent densities at three training snapshots.
+    Flat = uniform, a peak at pi/2 (or 3pi/2) = the X-eigenstate purity maximum,
+    anything else = task structure."""
+    d = read_csv("latent_drift_hist")
+    snaps = np.array(sorted(set(d["snap"].tolist())), dtype=int)
+    rows = [(k, c, lab) for k, c, lab in _DRIFT_SERIES if k != "mg_unif"]
+
+    fig, axes = plt.subplots(len(rows), len(snaps), sharex=True, sharey="row",
+                             figsize=(plotting.WIDE, 1.35 * len(rows) + 0.9))
+    for i, (key, color, label) in enumerate(rows):
+        for j, t in enumerate(snaps):
+            ax = axes[i, j]
+            m = (d["arm"] == key) & (d["snap"] == t)
+            for site in sorted(set(d["site"][m].tolist())):
+                ms = m & (d["site"] == site)
+                pooled = site < 0
+                ax.plot(d["bin_center"][ms], d["density"][ms], "-", color=color,
+                        lw=1.3 if pooled else 0.5, alpha=1.0 if pooled else 0.35,
+                        zorder=3 if pooled else 2)
+            # the purity-maximising latent positions (X eigenstates)
+            for g in (np.pi / 2, 3 * np.pi / 2):
+                ax.axvline(g, color=GREY_REF, ls=":", lw=0.8, zorder=1)
+            _angle_axis(ax)
+            ax.set_ylim(bottom=0)
+            if i == 0:
+                ax.set_title(f"epoch {t}", fontsize=8.5)
+            if j == 0:
+                ax.set_ylabel(f"{label}\nDensity", fontsize=7.5)
+            if i == len(rows) - 1:
+                ax.set_xlabel(r"Latent angle $\phi$")
+    plotting.save(fig, "latent_drift_hist")
+
+
+# channel_scaling styling (mirrors FAMILIES in exp_channel_scaling).  Colours follow
+# _HOLLOW_SERIES: the off-diagonal witness in blue, the hollow doped family in navy,
+# the floored matchgate control in teal.
+_CHANNEL_SERIES = (
+    ("g_od", ACCENT, r"Off-diag. ($d_Z{=}0$)"),
+    ("+XIY", NAVY, r"Hollow doped ($d_Z{=}0$)"),
+    ("mg", TEAL, r"Matchgate ($d_Z{=}n$)"),
+)
+
+
+def fig_channel_scaling() -> None:
+    """The circuit and encoder gradient channels side by side.
+
+    (a) both vs the angle spread sigma: the circuit channel tracks the purity at
+    sigma^4, the encoder channel recovers at sigma^2, i.e. as its square root.
+    (b) the suppression each channel suffers from clustered inputs, vs n, against the
+    square-root prediction -- does the separation survive growing n?
+    """
+    d = read_csv("channel_scaling")
+    dn = read_csv("channel_scaling_n")
+    sig = d["sigma"]
+    n_sig, sigma_fixed = int(d["n_sigma"][0]), float(d["sigma_fixed"][0])
+    pos = sig > 0  # sigma = 0 is an exact zero, undrawable on a log axis
+
+    fig, (a0, a1) = plt.subplots(1, 2, figsize=(plotting.WIDE, 2.8))
+    for key, color, label in _CHANNEL_SERIES:
+        a0.plot(sig[pos], d[f"{key}_circ"][pos], "o-", color=color, ms=3, label=label)
+        a0.plot(sig[pos], d[f"{key}_enc"][pos], "s--", color=color, ms=3, lw=1.1)
+    # guides anchored to the off-diagonal curves at the smallest sigma on the sweep
+    s0 = sig[pos][0]
+    for q, key in ((4.0, "g_od_circ"), (2.0, "g_od_enc")):
+        y0 = d[key][pos][0]
+        a0.plot(sig[pos], y0 * (sig[pos] / s0) ** q, ":", color=GREY_REF, lw=0.9)
+    a0.text(0.97, 0.05, r"$\propto\sigma^4$ / $\propto\sigma^2$", fontsize=7.5,
+            color=GREY_REF, ha="right", va="bottom", transform=a0.transAxes)
+    a0.set_xscale("log")
+    a0.set_yscale("log")
+    a0.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
+    a0.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}$")
+    a0.set_title(f"(a) $n={n_sig}$", fontsize=8.5)
+    plotting.unify_grid(a0)
+
+    for key, color, label in _CHANNEL_SERIES:
+        m = dn["family"] == key
+        ns = dn["n"][m]
+        s_circ = dn["circ_unif"][m] / dn["circ_clus"][m]
+        s_enc = dn["enc_unif"][m] / dn["enc_clus"][m]
+        a1.plot(ns, s_circ, "o-", color=color, ms=3, label=label)
+        a1.plot(ns, s_enc, "s--", color=color, ms=3, lw=1.1)
+        # square-root prediction for the encoder, from the measured circuit channel
+        a1.plot(ns, np.sqrt(s_circ), ":", color=color, lw=0.9, alpha=0.7)
+    a1.set_yscale("log")
+    a1.set_xlabel("$n$ Qubits")
+    a1.set_ylabel(r"Suppression $\mathrm{Var}^{\mathrm{unif}}/\mathrm{Var}^{\mathrm{clus}}$")
+    a1.set_title(rf"(b) $\sigma={sigma_fixed}$", fontsize=8.5)
+    a1.locator_params(axis="x", integer=True)
+    plotting.unify_grid(a1)
+
+    from matplotlib.lines import Line2D
+    handles = [Line2D([], [], color=c, ls="-", marker="o", ms=3, label=lab)
+               for _, c, lab in _CHANNEL_SERIES]
+    handles += [Line2D([], [], color="0.4", ls="-", marker="o", ms=3, label="Circuit"),
+                Line2D([], [], color="0.4", ls="--", marker="s", ms=3, label="Encoder"),
+                Line2D([], [], color="0.4", ls=":", lw=0.9, label=r"$\sqrt{\;\cdot\;}$ / guide")]
+    plotting.top_legend(a0, handles=handles, labels=[h.get_label() for h in handles],
+                        ncol=3, fontsize=7.5)
+    plotting.save(fig, "channel_scaling")
+
+
 def fig_encoding_landscape() -> None:
     d = read_csv("encoding_landscape")
     uniform_mean = float(d["uniform_mean"][0])
@@ -532,6 +705,9 @@ FIGURES = {
     "offdiag_purity": fig_offdiag_purity,
     "purity_regime_contrast": fig_purity_regime_contrast,
     "precondition_training": fig_precondition_training,
+    "latent_drift": fig_latent_drift,
+    "latent_drift_hist": fig_latent_drift_hist,
+    "channel_scaling": fig_channel_scaling,
     "doping_variance": fig_doping_variance,
     "hollow_dimension": fig_hollow_dimension,
     "hollow_sweep": fig_hollow_sweep,

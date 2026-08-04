@@ -11,6 +11,8 @@ EXPERIMENTS = {
     "input_purity": ("exp_input_purity", "Conditional thesis: input g-purity at fixed poly DLA  [~8 min]"),
     "precondition_training": ("exp_precondition_training", "Outlook: input distribution decides trainability (off-diagonal XX+YY DLA)"),
     "offdiag": ("exp_offdiag_closedform", "Prop 2: off-diagonal so(n)(+)so(n) closed form + prior contrast"),
+    "latent_drift": ("exp_latent_drift", "Memo: latent-distribution drift of an MLP-preconditioned QFM (off-diagonal vs matchgate)  [~20 min]"),
+    "channel_scaling": ("exp_channel_scaling", "Finding: circuit vs encoder gradient channel (sigma^4 vs sigma^2), scaling in n"),
     "doping": ("exp_doping", "Appendix: non-Gaussian doping trades trainability for hardness (dim BP)  [~min]"),
     "hollow_doping": ("exp_hollow_doping", "Outlook open question 1: hard floor-free (d_Z=0) families exist  [~10 min]"),
     "reuploading": ("exp_reuploading", "Appendix: dichotomy survives data re-uploading (exact zero at any depth)"),
