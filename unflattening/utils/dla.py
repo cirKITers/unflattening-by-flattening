@@ -30,6 +30,7 @@ __all__ = [
     "xx_yy_generators",
     "pauli_to_bitmasks",
     "word_matrix",
+    "apply_word",
     "random_dla_variance",
 ]
 
@@ -81,6 +82,26 @@ def word_matrix(x: int, z: int, n: int) -> np.ndarray:
     for i in range(n):
         M = np.kron(M, PAULI["IXZY"[((x >> i) & 1) + 2 * ((z >> i) & 1)]])
     return M
+
+
+def _reverse_bits(v: int, n: int) -> int:
+    """Bitmask bit q (qubit q) -> statevector index bit n-1-q (qubit 0 leftmost)."""
+    return sum(((v >> q) & 1) << (n - 1 - q) for q in range(n))
+
+
+def apply_word(psi: np.ndarray, x: int, z: int, n: int) -> np.ndarray:
+    """Apply the bare Pauli string ``(x, z)`` to a statevector in O(2^n).
+
+    ``word_matrix`` is O(4^n) in memory and time, which caps a statevector sweep at
+    n ~ 10; a Pauli string is a signed index permutation, so it can be applied
+    directly.  With Y = i X Z, the string acts as
+    ``P|b> = i^{n_Y} (-1)^{popcount(b & z)} |b ^ x>``.
+    Verified against ``word_matrix`` in exp_channel_scaling.
+    """
+    xr, zr = _reverse_bits(x, n), _reverse_bits(z, n)
+    src = np.arange(psi.size) ^ xr                       # b such that b ^ x = j
+    sign = 1.0 - 2.0 * (np.bitwise_count(src & zr) & 1)  # (-1)^{popcount(b & z)}
+    return (1j ** bin(x & z).count("1")) * sign * psi[src]
 
 
 def random_dla_variance(psi0, gen_mats, O, depth: int, M: int,

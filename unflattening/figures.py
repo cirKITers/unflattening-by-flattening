@@ -392,7 +392,7 @@ def fig_latent_drift_hist() -> None:
     anything else = task structure."""
     d = read_csv("latent_drift_hist")
     snaps = np.array(sorted(set(d["snap"].tolist())), dtype=int)
-    rows = [(k, c, lab) for k, c, lab in _DRIFT_SERIES if k != "mg_unif"]
+    rows = [(k, c, lab) for k, c, lab in _DRIFT_SERIES]
 
     fig, axes = plt.subplots(len(rows), len(snaps), sharex=True, sharey="row",
                              figsize=(plotting.WIDE, 1.35 * len(rows) + 0.9))
@@ -412,9 +412,9 @@ def fig_latent_drift_hist() -> None:
             _angle_axis(ax)
             ax.set_ylim(bottom=0)
             if i == 0:
-                ax.set_title(f"epoch {t}", fontsize=8.5)
+                ax.set_title(f"Epoch {t}", fontsize=8.5)
             if j == 0:
-                ax.set_ylabel(f"{label}\nDensity", fontsize=7.5)
+                ax.set_ylabel(f"{label}", fontsize=7.5)
             if i == len(rows) - 1:
                 ax.set_xlabel(r"Latent angle $\phi$")
     plotting.save(fig, "latent_drift_hist")
@@ -448,18 +448,20 @@ def fig_channel_scaling() -> None:
     for key, color, label in _CHANNEL_SERIES:
         a0.plot(sig[pos], d[f"{key}_circ"][pos], "o-", color=color, ms=3, label=label)
         a0.plot(sig[pos], d[f"{key}_enc"][pos], "s--", color=color, ms=3, lw=1.1)
-    # guides anchored to the off-diagonal curves at the smallest sigma on the sweep
-    s0 = sig[pos][0]
+    # guides over the fitted range only, anchored to the off-diagonal curves
+    fit = pos & (sig < 0.12)
+    s0 = sig[fit][0]
     for q, key in ((4.0, "g_od_circ"), (2.0, "g_od_enc")):
-        y0 = d[key][pos][0]
-        a0.plot(sig[pos], y0 * (sig[pos] / s0) ** q, ":", color=GREY_REF, lw=0.9)
+        y0 = d[key][fit][0]
+        a0.plot(sig[fit], y0 * (sig[fit] / s0) ** q, ":", color=GREY_REF, lw=0.9)
     a0.text(0.97, 0.05, r"$\propto\sigma^4$ / $\propto\sigma^2$", fontsize=7.5,
             color=GREY_REF, ha="right", va="bottom", transform=a0.transAxes)
+    a0.text(0.03, 0.96, f"(a) $n={n_sig}$", fontsize=8.5, ha="left", va="top",
+            transform=a0.transAxes)
     a0.set_xscale("log")
     a0.set_yscale("log")
     a0.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
     a0.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}$")
-    a0.set_title(f"(a) $n={n_sig}$", fontsize=8.5)
     plotting.unify_grid(a0)
 
     for key, color, label in _CHANNEL_SERIES:
@@ -474,7 +476,8 @@ def fig_channel_scaling() -> None:
     a1.set_yscale("log")
     a1.set_xlabel("$n$ Qubits")
     a1.set_ylabel(r"Suppression $\mathrm{Var}^{\mathrm{unif}}/\mathrm{Var}^{\mathrm{clus}}$")
-    a1.set_title(rf"(b) $\sigma={sigma_fixed}$", fontsize=8.5)
+    a1.text(0.03, 0.96, rf"(b) $\sigma={sigma_fixed}$", fontsize=8.5, ha="left",
+            va="top", transform=a1.transAxes)
     a1.locator_params(axis="x", integer=True)
     plotting.unify_grid(a1)
 
