@@ -90,13 +90,13 @@ from unflattening.experiments.exp_precondition_training import build_target
 
 N_QUBITS = 6
 DEPTH = 10        # re-uploading layers
-EPOCHS = 800
+EPOCHS = 500
 LR = 0.05         # one Adam for the joint (circuit, MLP) parameter tree
 N_TRAIN = 256
 RAW_EPS = 0.03    # spread of the raw angles around {0, pi}
 N_SEEDS = 8       # independent (W0, MLP0) draws -> mean +/- std bands
 HIDDEN = 16       # tanh units per site of the elementwise residual MLP
-SNAPSHOTS = (0, 10, 50, 200)  # epochs at which the latent sample is stored
+SNAPSHOTS = (0, 1, 2, 100)  # epochs at which the latent sample is stored
 HIST_BINS = 48    # bins on [0, 2pi) for the latent histograms
 
 # (arm key, quantum head, input law); the head fixes the DLA and the readout, the
