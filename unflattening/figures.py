@@ -374,6 +374,10 @@ def fig_latent_drift() -> None:
     a2.set_yscale("log")
     a2.set_xlabel("Epoch")
     a2.set_ylabel(r"$\hat{\mathcal{P}}(\boldsymbol{\phi})$")
+    # log epoch axis (shared): essentially all of the latent motion happens inside the
+    # first ~20 epochs, which a linear axis compresses into the left edge.
+    a2.set_xscale("log")
+    plotting.unify_grid(a0)
     plotting.unify_grid(a1)
     plotting.unify_grid(a2)
 

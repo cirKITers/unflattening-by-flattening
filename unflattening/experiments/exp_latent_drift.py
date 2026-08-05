@@ -33,42 +33,64 @@ Falsification: the original hypothesis predicts P^ -> mu_n with flat marginals i
 every descending run.  The refined form predicts a frozen arm, a plateau away from
 both 0 and n-1, and non-uniform end-state histograms.
 
-Outcome (n = 6, 8 seeds).  Prediction 1 is *refuted*: the raw arm is not frozen, it is
-rescued.  Its latent purity climbs from 7.0e-6 to 0.91 (1.3e5x) inside the first ~20
-epochs and its loss falls to 0.053 L_0, where the same data, target and W0 without the
-MLP stall above 0.85 L_0 (fig:precondition_training).  The reason is that the purity
-bound constrains the *circuit* channel, not the *encoder* channel: over a bank of
-random W at n = 6, clustering the inputs suppresses the input purity by 2.5e5, and
-Var_W[d<O>/dW] by 2.1e3, but Var_W[d<O>/dphi] by only 16.  The exact-zero identity
-kills the diagonal matrix element <a|U^dag O U|a> for every W, and with it the
-derivative in W, while the derivative in phi is an off-diagonal element that it does
-not constrain.  A barren plateau in the circuit parameters therefore need not be one
-in the parameters of a classical front end, and Adam's per-parameter normalisation
-turns the surviving small gradient into an escape within tens of epochs.
+Outcome (n = 6, 8 seeds, 500 epochs).  Prediction 1 is *refuted*: the raw arm is not
+frozen, it is rescued.  Its latent purity climbs from 7.0e-6 to 0.89 (1.3e5x) inside
+the first five epochs and its loss falls to 0.057 L_0, where the same data, target and
+W0 without the MLP stall above 0.85 L_0 (fig:precondition_training).  The reason,
+quantified in exp_channel_scaling, is that the purity bound constrains the *circuit*
+channel and not the *encoder* channel: writing the inputs as phi = a + sigma xi with a
+on the computational basis, Var_W[<O>] tracks the purity at sigma^4 while
+Var_W[d<O>/dphi] recovers at sigma^2, so the encoder channel is the square root of the
+circuit channel.  The exact-zero identity kills the diagonal matrix element
+<a|U^dag O U|a> for every W, and with it the derivative in W, while the derivative in
+phi is an off-diagonal element that it does not constrain.  A barren plateau in the
+circuit parameters therefore need not be one in the parameters of a classical front
+end, and Adam's per-parameter normalisation turns the surviving small gradient into an
+escape within a handful of epochs.
 
 Predictions 2-4 hold.  No arm converges to uniform and none approaches the maximum:
-the uniform arm ends at P^ = 1.72 against mu_n = 1.45 and the attainable n-1 = 5, and
-the rescued raw arm stops at 0.91, short even of mu_n.  The end-state histograms are
-neither flat nor peaked at pi/2 -- the uniform arm stays near-flat with per-site
-structure, and the raw arm's two atoms per site broaden into a spread law rather than
-relocating to the purity-maximising pi/2.  The floored matchgate control trains with
-its purity pinned to the floor throughout (5.995 -> 5.014, always within [n-1, n]) and
-drifts about three times further in angle than the off-diagonal arms, buying nothing.
+the uniform arm ends at P^ = 1.68 against mu_n = 1.45 and the attainable n-1 = 5, and
+the rescued raw arm stops at 0.89, short even of mu_n.  Measuring the end states by
+per-site total variation to the uniform law (sampling floor 0.17, since the seeds share
+one dataset), over epochs 0 -> 500: the uniform arm goes 0.172 -> 0.137, i.e. it starts
+uniform and never leaves; the raw arm goes 0.917 -> 0.608, i.e. it moves toward uniform
+and stops a long way short.  Neither ends uniform nor peaked at pi/2.  Note that the
+*pooled* histogram is misleading here -- averaging six sites whose peaks sit at
+different angles flattens them into something that looks uniform, which is why the
+per-site curves and this statistic are the discriminator, not the pooled line.
+
+The floored matchgate control is the cleanest confirmation of the mechanism.  Its
+purity has no room to move (eq:productform pins it to [n-1, n]) and it does not move:
+the uniform arm sits at 5.018 for all 500 epochs, unchanged to three decimals, and the
+clustered arm slides 5.995 -> 5.391, i.e. *down* from the ceiling toward the floor --
+task-driven latent motion that buys no purity at all.  At clustered inputs its front
+end is also the most static of the four (mean |phi-x| = 0.39 against 0.66 for the
+off-diagonal arm on the identical dataset, and per-site TV 0.713 against 0.608), while
+its loss still descends: exactly the reversed asymmetry exp_channel_scaling predicts,
+where the floor protects the circuit channel and leaves the encoder channel to die.
+
+CAVEAT, and it is easy to get wrong: L/L_0 is *not* comparable across arms.  The raw
+inputs sit near {0,pi}^n, so they collapse to 63 distinct bit patterns over the 256
+samples and the target collapses with them -- a cluster-mean lookup explains 99.84 % of
+Var[y_raw], and those means are fit by a 22-coefficient degree-2 polynomial in the six
+bits to R^2 = 0.9995.  The raw arms therefore solve a far easier regression than the
+uniform arms, and their lower relative loss says nothing about the input law being
+better.  The valid comparison is within an arm: same data, same target, same W0, with
+the MLP versus without.
 
 TODO: the escape is measured under Adam, whose normalisation is what converts a small
 encoder gradient into a finite step; plain SGD may still be trapped, which would make
-the boundary optimiser-dependent rather than absent.  TODO: single target and single
-n -- the 16x encoder-channel suppression should be checked for n-scaling before the
-claim is carried into the manuscript.
+the boundary optimiser-dependent rather than absent.  TODO: single target and single n.
 
-Setup is that of fig:precondition_training verbatim -- n = 6, depth 10, the same
-Fourier target, the same 256-sample datasets (identical RNG stream), the same Adam
-at lr 0.05 for 800 epochs over 8 seeds, and for the off-diagonal head the same W0 --
-so the quantum-only curves of that figure are the no-MLP baseline of this one.  The
-MLP and the circuit train jointly under one optimiser.
+Setup is that of fig:precondition_training -- n = 6, depth 10, the same Fourier target,
+the same 256-sample datasets (identical RNG stream), the same Adam at lr 0.05 over 8
+seeds, and for the off-diagonal head the same W0 -- so the quantum-only curves of that
+figure are the no-MLP baseline of this one.  The MLP and the circuit train jointly
+under one optimiser.
 
 Figures: latent_drift (loss, gradient variance split by parameter group, and P^ vs
-epoch), latent_drift_hist (per-site latent histograms at three training snapshots).
+epoch, on a log epoch axis since nearly all the motion is over by epoch ~20),
+latent_drift_hist (per-site latent histograms at four training snapshots).
 """
 
 from __future__ import annotations
@@ -132,8 +154,16 @@ def build_head(kind: str, n_qubits: int = N_QUBITS, depth: int = DEPTH):
                   data_reupload=dmask, encoding=["RY"] * n_qubits, observables=obs)
 
     def predict(W, Phi):  # <O> per row (Phi is the *latent* angle batch)
-        return model(params=W, inputs=Phi, execution_type="expval").sum(axis=-1)
+        vals = model(params=W, inputs=Phi, execution_type="expval")
+        # several observables come back as (batch, n_obs) and must be summed over the
+        # observable axis; a *single* observable comes back as (batch,), where the same
+        # sum would instead collapse the batch into one scalar prediction for the whole
+        # dataset (cf. the same guard in exp_reuploading.var_vs_depth).
+        return vals.sum(axis=-1) if vals.ndim > 1 else vals
 
+    probe = predict(np.full(model._params_shape, 0.5), np.full((3, n_qubits), 0.5))
+    assert np.shape(probe) == (3,), \
+        f"{kind}: predictor must return one value per input row, got {np.shape(probe)}"
     return model, predict, purity_fn
 
 
