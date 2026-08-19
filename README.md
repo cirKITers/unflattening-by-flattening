@@ -1,7 +1,8 @@
 # Numerical experiments for the `Unflattening by flattening` paper
 
-Quantum circuits are simulated with the **JAQSI** simulator shipped in the [`qml-essentials`](https://cirkiters.github.io/qml-essentials/) package, which also provides the $\mathfrak{so}(2n)$ DLA basis, the $\mathfrak{g}$-purity, the Lie-closure helpers and the certified input states (`qml_essentials.algebra`, `qml_essentials.states`, `qml_essentials.operations.PauliWord`).  
-This is accompanied by a small `utils` subpackage (`unflattening.utils`) which holds adapters for the given experiments.
+In this work we study how the input distribution affects the trainability of a quantum machine learning circuits.
+
+Documentation is still WIP.
 
 ## Usage
 
