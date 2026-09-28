@@ -266,10 +266,9 @@ def fig_precondition_training() -> None:
     ax.set_xlabel("Epoch")
     ax.set_ylabel(r"$\mathcal{L}/\mathcal{L}_0$")
 
-    # secondary axis: gradient variance Var[d_W L], the barren-plateau diagnostic
-    # (dashed).  Vanishing floor for raw throughout; for preconditioned it starts
-    # orders of magnitude higher and decays only as the loss converges.  Bands are
-    # geometric mean +/- std over the initialisations.
+    # Coordinate-wise gradient dispersion at each iterate, not an ensemble
+    # gradient variance. Bands are exp(mean(log v) +/- std(log v)) across seeds.
+    # Legacy CSV suffixes pre/raw denote the uniform/clustered input priors.
     ax2 = ax.twinx()
     ax2.grid(False)
     ax2.plot(epoch_axis, gv_pre, "--", color=TEAL, lw=0.9)
@@ -277,14 +276,14 @@ def fig_precondition_training() -> None:
     ax2.plot(epoch_axis, gv_raw, "--", color=ORANGE, lw=0.9)
     ax2.fill_between(epoch_axis, gv_raw_lo, gv_raw_hi, color=ORANGE, alpha=0.15, lw=0)
     ax2.set_yscale("log")
-    ax2.set_ylabel(r"$\mathrm{Var}[\partial_{\boldsymbol{\theta}} \mathcal{L}]$")
+    ax2.set_ylabel(r"$\mathrm{Var}_j[\partial_{\theta_j}\mathcal{L}]$")
 
     # legend outside on top (as in fig8/fig9): colour = input law, style = quantity.
     from matplotlib.lines import Line2D
-    handles = [Line2D([], [], color=TEAL, ls="-", label="Preconditioned"),
-               Line2D([], [], color=ORANGE, ls="-", label="Raw"),
+    handles = [Line2D([], [], color=TEAL, ls="-", label="Uniform prior"),
+               Line2D([], [], color=ORANGE, ls="-", label="Clustered prior"),
                Line2D([], [], color="0.4", ls="-", label=r"Loss $\mathcal{L}/\mathcal{L}_0$"),
-               Line2D([], [], color="0.4", ls="--", label="Grad. Var.")]
+               Line2D([], [], color="0.4", ls="--", label="Gradient dispersion")]
     plotting.top_legend(ax, handles=handles,
                         labels=[h.get_label() for h in handles], ncol=2)
     plotting.save(fig, "precondition_training")
@@ -580,9 +579,10 @@ def fig_offdiag_purity() -> None:
     # proxy for the dashed variance curves; on axhi so top_legend(axhi) actually picks it up
     axhi.plot([], [], "--", color=NAVY, lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")
     axhi_v, axlo_v = axhi.twinx(), axlo.twinx()            # variance on the right axis (dashed)
+    nonabelian = ns >= 3  # n=2 has zero variance, omitted on logarithmic axes
     for av in (axhi_v, axlo_v):
-        av.plot(ns, var_unif, "--", color=TEAL, lw=1.1)
-        av.plot(ns, var_clus, "--", color=ORANGE, lw=1.1)
+        av.plot(ns[nonabelian], var_unif[nonabelian], "--", color=TEAL, lw=1.1)
+        av.plot(ns[nonabelian], var_clus[nonabelian], "--", color=ORANGE, lw=1.1)
         av.set_yscale("log")
     axhi_v.set_ylim(0.028, 0.32)                           # uniform var band
     axlo_v.set_ylim(3.3e-7, 1.0e-6)                        # clustered var band
@@ -602,9 +602,9 @@ def fig_offdiag_purity() -> None:
 
     axlo.set_xlabel("$n$ Qubits")
     axlo.locator_params(axis="x", integer=True)
-    axlo.set_ylabel(r"$\mathcal{P}_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
+    axlo.set_ylabel(r"$\mathbb{E}_{\boldsymbol{\phi}}[\mathcal{P}_{\mathfrak{g}}]$")
     axlo.yaxis.set_label_coords(-0.19, 1.0)                # centre the shared label across the break, clear of the ticks
-    axlo_v.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$")
+    axlo_v.set_ylabel(r"$\mathbb{E}_{\boldsymbol{\phi}}[\mathrm{Var}_{\boldsymbol{\theta}} f]$")
     axlo_v.yaxis.set_label_coords(1.16, 1.0)
 
     plotting.top_legend(axhi, ncol=2)
@@ -625,13 +625,13 @@ def fig_purity_regime_contrast() -> None:
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
-    ax.set_ylabel(r"$\mathcal{P}_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
+    ax.set_ylabel(r"$\mathbb{E}_{\boldsymbol{\phi}}[\mathcal{P}_{\mathfrak{g}}]$")
 
     axv = ax.twinx()                                       # loss variance on the right axis (dashed)
     axv.plot(sigmas, var_mg, "--", color=TEAL, lw=1.1)
     axv.plot(sigmas, var_od, "--", color=ORANGE, lw=1.1)
     axv.set_yscale("log")
-    axv.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$")
+    axv.set_ylabel(r"$\mathbb{E}_{\boldsymbol{\phi}}[\mathrm{Var}_{\boldsymbol{\theta}} f]$")
 
     plotting.unify_grid(ax, axv)                            # major decade grid on the primary axis only
     ax.legend(loc="lower right", fontsize=7.5)
@@ -682,19 +682,16 @@ def fig_hollow_sweep() -> None:
     a1.set_yscale("log")
     a1.set_ylim(top=dZ * 6)
     a1.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
-    a1.set_ylabel(r"$\mathcal{P}_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
+    a1.set_ylabel(r"$\mathbb{E}_{\boldsymbol{\phi}}[\mathcal{P}_{\mathfrak{g}}]$")
 
-    # right axis: same readout and formula as purity_regime_contrast.  X_1X_2+Y_1Y_2
-    # places one basis string in each of the two equal-dimensional ideals of every
-    # family here, so Var = 2 P_g / dim g independently of how the purity splits
-    # (verified at n=6 vs random circuits: ratios 0.97/0.98/0.95/1.11).  Dividing by
-    # dim g exposes what the purity alone hides -- the exponential families sit at
-    # the 2^-n cap even where their purity is highest.
+    # At the plotted n=8, XX+YY has equal HS projection weight in each of
+    # the equal-dimensional simple ideals, giving Var = 2 P_g / dim g.
+    # The graph families have four ideals, the chain and doped chain two.
     axv = a1.twinx()
     for _, col, _, _, key, _ in _HOLLOW_SERIES:
         axv.plot(sigmas, 2 * d[key] / d[f"dim_{key}"][0], "--", color=col, lw=1.1)
     axv.set_yscale("log")
-    axv.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}=2\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$")
+    axv.set_ylabel(r"$\mathbb{E}_{\boldsymbol{\phi}}[\mathrm{Var}_{\boldsymbol{\theta}} f]$")
     plotting.unify_grid(a1, axv)                            # major decade grid on the primary axis only
 
     plotting.top_legend(a1, ncol=2, fontsize=7.5, handlelength=1.2,

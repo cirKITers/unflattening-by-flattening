@@ -10,8 +10,8 @@ i.e. the matchgate cross-sum (Prop. 1) restricted to opposite-parity endpoints, 
 the on-site sum cos^2 floor term removed.  Three checks:
   * closed form == brute-force g_purity_from_basis over lie_closure_paulis(...)
   * uniform prior keeps E[P_g] = Omega(n) (-> n/3) while a prior clustered near {0,pi}
-    drives P_g -> 0 (barren)
-  * the two-ideal readout factor Var_theta = 2 P_g/dim g (sec:proofs) against deep
+    drives P_g -> 0 as the clustering width vanishes
+  * the two-ideal readout factor Var_theta = 2 P_g/dim g (main.tex, purity-normalization appendix) against deep
     random e^{g_od} statevector circuits at n = 6 (part_variance).
 
 Figures: offdiag_purity (mean P_g vs n, uniform vs clustered, with the closed-form
@@ -123,6 +123,10 @@ def part_purity(rng: np.random.Generator, n_max: int = N_FIG, n_brute: int = N_B
     # Var = P_A/(dim/2) + P_B/(dim/2) = 2 P_g/dim g regardless of the P split
     # (validated against statevector simulation in part_variance).
     var_unif, var_clus = 2 * mean_unif / dim, 2 * mean_clus / dim
+    # At n=2 both components are abelian: XX+YY is parameter-independent.
+    # At n=4 the four simple ideals have equal readout weight, retaining 2P/dim.
+    var_unif[ns == 2] = 0.0
+    var_clus[ns == 2] = 0.0
 
     # runnable checks: closed form tracks analytic mean + brute-force basis; uniform purity grows
     # Omega(n) yet its variance FALLS as Theta(1/n) (purity up, variance down); clustered collapses.
@@ -131,7 +135,7 @@ def part_purity(rng: np.random.Generator, n_max: int = N_FIG, n_brute: int = N_B
         "brute-force basis mean must match the closed-form mean"
     assert mean_unif[-1] > mean_unif[0] * 1.5, "uniform E[P_g] must grow (Omega(n))"
     assert mean_clus[-1] < 0.01 * mean_unif[-1], "clustered prior must collapse far below uniform"
-    assert var_unif[-1] < var_unif[0], "uniform Var_W must fall (purity up, variance down ~ Theta(1/n))"
+    assert var_unif[-1] < var_unif[ns >= 3][0], "uniform Var_W must fall (purity up, variance down ~ Theta(1/n))"
 
     # ns_b is the leading prefix of ns, so the brute-force column is simply shorter
     # than the rest of the table (tail-padded in the CSV).
@@ -169,7 +173,7 @@ def part_regime(rng: np.random.Generator, n: int = N_REGIME,
 
 def part_variance(rng: np.random.Generator, n: int = N_VARIANCE, M: int = M_VARIANCE,
                   depth: int = DEPTH_VARIANCE) -> None:
-    """Statevector check of the two-ideal readout factor (sec:proofs): deep random
+    """Statevector check of the two-ideal readout factor (main.tex, purity-normalization appendix): deep random
     e^{g_od} circuits with the in-algebra readout O = X_i X_{i+1} + Y_i Y_{i+1}
     give Var_theta = 2 P_g/dim g, i.e. ~2x the naive single-ideal P_g/dim g."""
     from unflattening.utils.dla import pauli_to_bitmasks, word_matrix, random_dla_variance

@@ -27,13 +27,13 @@ Answer explored here: YES.  Three parts.
 (C) Variance validation at n = 6 for g_h = <{XX,YY}, {XIY}>: the two-ideal LASA
     formula Var_W[<X_1X_2>] = sum_j P_j(rho) P_j(O) / dim g_j (ideals = fermion
     parity sectors, each ~ so(2^{n-1})) against deep random product circuits.
-    At exactly clustered inputs the loss vanishes IDENTICALLY (every W, every
+    At exactly clustered inputs the output vanishes IDENTICALLY (every W, every
     computational-basis input), since W^dag O W stays in the hollow algebra.
 
 CAVEAT (todos in research-floor-free-hardness.md): d_Z = 0 is verified up to
-n = 9 (doped chain) and n = 8 (graphs), not proven for all n; hardness of g_h
-itself is inferred from the sector structure and the adjacent Brod-Childs
-universality, not proven.
+n = 9 (doped chain) and n = 8 (graphs), not proven for all n; hardness of the doped gate set is conjectural. Exponential dimension and
+encoded universality of a related gate set do not establish hardness of this
+particular input/readout problem.
 """
 
 from __future__ import annotations
@@ -282,11 +282,11 @@ def validate_sweep_variance(n: int, rng: np.random.Generator, M: int = M_SWEEP_V
                             depth: int = DEPTH_VARIANCE) -> list:
     """Var = 2 P_g / dim g for the readout plotted on the right axis of fig:hollow.
 
-    X_1X_2 + Y_1Y_2 puts one basis string in each of the two equal-dimensional
-    ideals of every family here, so the variance is split-independent (the
-    appendix argument for g_od).  The single-string X_1X_2 is NOT: it weights
-    the two so(n) ideals of g_od unequally and lands ~26% low, which is why the
-    figure plots this readout instead.
+    At the checked sizes, XX+YY has equal HS weight in equal-dimensional
+    simple ideals. The number of ideals depends on the family and n.
+    The chain has two at n>=5, while the n=8 graph families have four.
+    This check compares the aggregate Haar prediction to finite random circuits.
+    A single XX readout need not weight the chain ideals equally.
     """
     path = [(k, k + 1) for k in range(n - 1)]
     fams = {"g_od": offdiag_basis(n),
@@ -324,7 +324,7 @@ def part_variance(rng, n: int = N_VARIANCE) -> list:
 
 def basis_profiles(n: int = N_PROFILE) -> tuple[dict, dict]:
     """(nx, nz) profile and dim g of each family's n-qubit basis, for the exact
-    regime sweep.  The dims carry the sweep's second axis Var = P_g / dim g."""
+    regime sweep.  The dims carry the sweep's second axis Var = 2 P_g / dim g."""
     path = [(k, k + 1) for k in range(n - 1)]
     closures = {
         "g_od": capped_closure(offdiag_basis(n)),

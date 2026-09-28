@@ -1,33 +1,17 @@
-"""reuploading -- does the input-distribution dichotomy survive data re-uploading?
+"""Finite-depth output-variance comparison under data re-uploading.
 
-The single-block analysis (Props. 1-5) covers |psi(Theta)> -> U(W) -> <O>.  A QFM
-re-uploads the R_y encoding between trainable blocks,
+The qml_essentials.Model convention is ansatz-first, with L encoding blocks
+and L+1 trainable blocks. Product-input purity formulas do not directly apply
+to the intermediate, generally entangled states.
 
-    |0> -> S(Theta) U(W_1) S(Theta) U(W_2) ... S(Theta) U(W_L) -> <O>,
+Exactly computational-basis angles make each encoder a Pauli string, so the
+floor-free output is zero regardless of block ordering. This is checked here
+at L=1 and L=8. Nonzero-width and uniform-prior behavior is empirical over the
+measured depth range. The matchgate priors both retain a nonzero signal but
+need not give equal variances. No equivalence between block orderings is claimed
+away from exact clustering.
 
-which the 2-design-on-e^g argument does not formally cover.  Two facts checked here:
-
-  * exact zero at any depth: at clustered angles theta in {0,pi}^n each encoding
-    layer S(Theta) is a Pauli string (R_y(pi) = -iY).  Pauli strings normalise any
-    Pauli-generated DLA (conjugation maps basis strings to +-themselves) and map
-    computational states to computational states, so the whole circuit collapses to
-    (one e^g circuit) x (one Pauli) and Prop. 5 applies verbatim: the loss vanishes
-    identically for every depth L and every W.
-  * empirically, the uniform-prior variance stays at its single-block level as L
-    grows (the dichotomy is depth-stable), for the floor-free off-diagonal family,
-    while the floored matchgate stays flat under both priors.
-
-The circuit is built with the maintained ``qml_essentials.Model`` in its native
-ansatz-first (Schuld ``L+1``) convention, ``U(W_0) S(Theta) ... S(Theta) U(W_L)``,
-rather than the encoding-first equation above.  The clustered-angle collapse and
-the variance dichotomy are order-agnostic (a Pauli encoder normalises the DLA and
-commutes through either way; the exact-zero check below confirms it), so the two
-conventions are equivalent for the claims here.
-TODO: reconcile with main.tex -- keep the encoding-first equation and add a one-line
-remark that the block ordering is immaterial to the collapse/variance claims.
-
-Figure: reuploading_depth (Var_W[<O>] vs re-uploading depth L; off-diagonal uniform vs
-clustered, matchgate uniform vs clustered).
+Figure: reuploading_depth (sampled output variance vs encoding depth).
 """
 from __future__ import annotations
 
@@ -60,7 +44,7 @@ def var_vs_depth(circuit_type: str, thetas: np.ndarray, obs, key,
     """Var_W[<O>] for each theta row and depth in ``depths``, via qml_essentials.Model.
 
     ``Model`` builds the ansatz-first re-uploading circuit with ``n_layers=depth``
-    (data_reupload -> depth+1 ansatz layers); ``obs`` is summed to the scalar loss
+    (data_reupload -> depth+1 ansatz layers); ``obs`` is summed to the scalar output
     <sum_i O_i>.  Returns ``(len(depths), len(thetas))``.
     """
     out = np.zeros((len(depths), thetas.shape[0]))
@@ -104,8 +88,8 @@ def part_reuploading(rng, key, n_qubits=N_QUBITS, depths=DEPTHS, k_th=K_TH,
     mg_unif = var_vs_depth("Matchgate", th_unif, Zi, k3, n_qubits, depths, n_samples)
     mg_clus = var_vs_depth("Matchgate", th_clus, Zi, k4, n_qubits, depths, n_samples)
 
-    # exact zero at sigma = 0, at every depth (Pauli-normaliser collapse + Prop. 5):
-    # measure the raw loss values, not the variance, and demand machine zero.
+    # exact zero at sigma = 0, at every depth (Pauli-normalizer argument in main.tex):
+    # measure the raw output values, not the variance, and demand machine zero.
     worst = 0.0
     for depth in (1, depths[-1]):
         model = Model(
@@ -118,16 +102,16 @@ def part_reuploading(rng, key, n_qubits=N_QUBITS, depths=DEPTHS, k_th=K_TH,
         vals = np.asarray(model(params=W, inputs=jnp.asarray(th_exact[0], dtype=float),
                                 execution_type="expval")).sum(axis=-1)
         worst = max(worst, float(np.abs(vals).max()))
-    print(f"exact-clustered reuploading loss: max|<O>| = {worst:.2e} (any depth)")
+    print(f"exact-clustered reuploading output: max|<O>| = {worst:.2e} (checked endpoint depths)")
 
-    # runnable checks: the dichotomy is depth-stable.
-    assert worst < 1e-10, "clustered re-uploading loss must vanish identically (Prop. 5 extension)"
+    # finite-depth checks of the observed input-prior contrast.
+    assert worst < 1e-10, "exact-clustered re-uploading output must vanish"
     assert od_clus.mean(axis=1)[-1] < 0.05 * od_unif.mean(axis=1)[-1], \
         "off-diagonal clustered variance must stay collapsed at large depth"
     assert od_unif.mean(axis=1)[-1] > 0.2 * od_unif.mean(axis=1)[0], \
         "off-diagonal uniform variance must not collapse with depth"
     assert mg_clus.mean(axis=1)[-1] > 0.2 * mg_unif.mean(axis=1)[-1], \
-        "matchgate must stay distribution-insensitive under re-uploading"
+        "clustered matchgate output variance must retain a nonzero signal"
 
     # long format, depth-major: one row per (depth, theta configuration); the figure
     # takes the mean and the 10/90 quantiles over the k_th configurations.

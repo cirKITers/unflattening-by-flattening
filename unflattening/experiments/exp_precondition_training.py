@@ -1,27 +1,17 @@
-"""precondition_training -- the Outlook claim in actual gradient descent: for a
-floor-free off-diagonal family, the input distribution decides trainability.
+"""Training comparison between uniform and clustered angle priors.
 
-A quantum Fourier model (R_y angle encoding reuploaded with a trainable XX+YY
-brickwork, generators {X_k X_{k+1}, Y_k Y_{k+1}}; in-algebra readout
-O = X_i X_{i+1} + Y_i Y_{i+1}) is trained on the *same* Fourier-series target, from
-the *same* initial parameters, under two input angle distributions:
-  * preconditioned theta ~ U[0,2pi)^n  -> P_g^{XX+YY} = Omega(n) (Lemma isotropic
-    realises this uniform prior), gradients are healthy, the loss descends;
-  * raw, clustered near {0,pi}          -> P_g^{XX+YY} ~ 0, the W-landscape is flat
-    (Var_W collapses), the loss is frozen near its start (barren).
+The priors supply separate datasets labeled by the same Fourier target function.
+Initial parameters are paired across priors. No rotation is applied to a shared
+labeled dataset. The ansatz-first circuit has 10 R_y encoding blocks and 11
+trainable XX/YY blocks, with an in-algebra XX+YY readout.
 
-Unlike the matchgate so(2n), this off-diagonal DLA has no single-qubit Z and hence
-no deterministic purity floor (cf. Lemma deterministic): the input g-purity is not
-bounded below, so the input distribution alone separates trainable from barren.
-The readout is an in-algebra XY observable, not the matchgate Z_i, precisely
-because Z_i sits on the floor-protected diagonal and cannot expose this effect.
+The product-state purity is a reference diagnostic, not the actual state purity
+at the first trainable block of this circuit. Saved gradvar fields measure
+coordinate-wise gradient dispersion at one iterate, not ensemble gradient
+variance. Legacy pre/raw names mean uniform/clustered and are kept for CSV
+compatibility. These finite-size results do not establish BP scaling.
 
-The circuit is built with the maintained qml_essentials.Model in its ansatz-first
-(Schuld L+1) convention (observables=[XX, YY]); per-qubit encoding angles use a
-diagonal data-reupload mask.  The input-distribution dichotomy is order-agnostic
-(see exp_reuploading).  TODO: reconcile the ordering remark with main.tex.
-
-Figure: precondition_training (training loss vs epoch, preconditioned vs raw).
+Figure: precondition_training (relative loss and gradient dispersion vs epoch).
 """
 
 from __future__ import annotations
@@ -106,7 +96,7 @@ def build_target(rng, key, n_qubits: int = N_QUBITS, max_order: int = MAX_ORDER,
 def part_diagnostics(model, predict, basis, th_pre, th_raw, th_pre_j, th_raw_j,
                      m_var: int = M_VAR, pg_samples: int = PG_SAMPLES,
                      var_samples: int = VAR_SAMPLES):
-    """Input g-purity and the Var_W[<O>] barren-plateau diagnostic, per input law."""
+    """Product-state reference purity and sampled output variance per input law."""
     pg_pre = float(np.mean([g_purity_from_basis(product_state(t), basis) for t in th_pre[:pg_samples]]))
     pg_raw = float(np.mean([g_purity_from_basis(product_state(t), basis) for t in th_raw[:pg_samples]]))
 
@@ -140,6 +130,7 @@ def part_training(model, predict, th_pre_j, y_pre, th_raw_j, y_raw,
         def step(W, state):
             l, g = jax.value_and_grad(lambda W: jnp.mean((predict(W, Theta) - y) ** 2))(W)
             updates, state = opt.update(g, state)
+            # Dispersion across parameter coordinates at this iterate.
             return optax.apply_updates(W, updates), state, l, jnp.var(g)
 
         losses, gradvars = [], []
@@ -163,33 +154,32 @@ def part_training(model, predict, th_pre_j, y_pre, th_raw_j, y_raw,
 
 def part_figure(stacks, diagnostics, targets, dim_g: int, epochs: int = EPOCHS,
                 n_seeds: int = N_SEEDS) -> None:
-    """Training loss vs epoch (preconditioned vs raw), with the gradient-variance
+    """Training loss vs epoch (uniform vs clustered), with the gradient-dispersion
     diagnostic on a secondary axis."""
     rel_pre_s, rel_raw_s, gv_pre_s, gv_raw_s = stacks
     pg_pre, pg_raw, vw_pre, vw_raw = diagnostics
     y_pre, y_raw = targets
 
-    # loss: linear mean/std (linear axis).  grad variance: geometric mean/std
+    # loss: linear mean/std (linear axis).  gradient dispersion: summaries in log space
     # (log axis), so band edges stay positive.
     rel_pre, rel_pre_sd = rel_pre_s.mean(0), rel_pre_s.std(0)
     rel_raw, rel_raw_sd = rel_raw_s.mean(0), rel_raw_s.std(0)
     lgp, lgr = np.log(np.maximum(gv_pre_s, 1e-300)), np.log(np.maximum(gv_raw_s, 1e-300))
     gv_pre, gv_pre_lo, gv_pre_hi = np.exp(lgp.mean(0)), np.exp(lgp.mean(0) - lgp.std(0)), np.exp(lgp.mean(0) + lgp.std(0))
     gv_raw, gv_raw_lo, gv_raw_hi = np.exp(lgr.mean(0)), np.exp(lgr.mean(0) - lgr.std(0)), np.exp(lgr.mean(0) + lgr.std(0))
-    print(f"  loss preconditioned (mean): {rel_pre[0]:.3f} -> {rel_pre[-1]:.3f}")
-    print(f"  loss raw (mean):            {rel_raw[0]:.3f} -> {rel_raw[-1]:.3f}")
-    print(f"  grad var (init): preconditioned={gv_pre[0]:.2e}  raw={gv_raw[0]:.2e}  ratio={gv_pre[0]/gv_raw[0]:.1e}")
+    print(f"  loss uniform (mean): {rel_pre[0]:.3f} -> {rel_pre[-1]:.3f}")
+    print(f"  loss clustered (mean):            {rel_raw[0]:.3f} -> {rel_raw[-1]:.3f}")
+    print(f"  gradient dispersion (init): uniform={gv_pre[0]:.2e}  clustered={gv_raw[0]:.2e}  ratio={gv_pre[0]/gv_raw[0]:.1e}")
 
-    # runnable checks: at fixed circuit, readout and target, the input distribution
-    # alone separates a descending (preconditioned) from a frozen (raw) loss, on
-    # average over the n_seeds initialisations.
-    assert pg_pre > 50 * pg_raw, "preconditioned input must have far higher g-purity"
-    assert vw_pre > 5 * vw_raw, "preconditioned loss landscape must be far less flat"
+    # Finite-experiment checks of the saved contrast between the two priors.
+    # They are not an asymptotic BP or preprocessing guarantee.
+    assert pg_pre > 50 * pg_raw, "uniform input must have far higher g-purity"
+    assert vw_pre > 5 * vw_raw, "uniform output variance must be much larger"
     assert y_pre.std() > 0.5 and y_raw.std() > 0.5, "target must be non-trivial on both"
-    assert rel_pre[-1] < 0.75, "preconditioned training must descend (mean)"
-    assert rel_raw[-1] > 0.85, "raw training must stall (frozen, barren; mean)"
-    assert rel_pre[-1] < 0.7 * rel_raw[-1], "preconditioned must progress far more than raw"
-    assert gv_pre[0] > 50 * gv_raw[0], "preconditioned must start with far larger gradient variance"
+    assert rel_pre[-1] < 0.75, "uniform training must descend (mean)"
+    assert rel_raw[-1] > 0.85, "clustered training has limited progress (mean)"
+    assert rel_pre[-1] < 0.7 * rel_raw[-1], "uniform must progress far more than clustered"
+    assert gv_pre[0] > 50 * gv_raw[0], "uniform must start with far larger gradient dispersion"
 
     epoch_axis = np.arange(1, epochs + 1)
     figures.write_csv("precondition_training", dict(
@@ -223,8 +213,8 @@ def main() -> None:
     diagnostics = part_diagnostics(model, predict, basis, th_pre, th_raw, th_pre_j, th_raw_j)
     pg_pre, pg_raw, vw_pre, vw_raw = diagnostics
     print(f"precondition_training -- off-diagonal XX+YY DLA, n={N_QUBITS}, depth={DEPTH}, dim g={len(basis)}")
-    print(f"  P_g^XXYY:  preconditioned={pg_pre:.3f}   raw={pg_raw:.3e}   ratio={pg_pre/pg_raw:.1e}")
-    print(f"  Var_W[<O>]: preconditioned={vw_pre:.3e}  raw={vw_raw:.3e}  ratio={vw_pre/max(vw_raw,1e-30):.1e}")
+    print(f"  P_g^XXYY:  uniform={pg_pre:.3f}   clustered={pg_raw:.3e}   ratio={pg_pre/pg_raw:.1e}")
+    print(f"  Var_W[<O>]: uniform={vw_pre:.3e}  clustered={vw_raw:.3e}  ratio={vw_pre/max(vw_raw,1e-30):.1e}")
 
     stacks = part_training(model, predict, th_pre_j, y_pre, th_raw_j, y_raw)
     part_figure(stacks, diagnostics, (y_pre, y_raw), len(basis))
