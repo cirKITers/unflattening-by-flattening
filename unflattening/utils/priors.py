@@ -1,14 +1,4 @@
-"""Angle priors and the isotropic-preconditioning ("polar encoding") map.
-
-The manuscript treats the input *angle distribution* as a classical
-preconditioning choice.  Here:
-  * ``sample_uniform``   -- the near-optimal prior of Lemma 2;
-  * ``sample_clustered`` -- raw small-feature angles (theta ~ 0, rho ~ |0^n>),
-    the pathological case used in the Conjecture 1 discussion;
-  * ``isotropic_precondition`` -- random-rotation preconditioning that turns
-    anisotropic data into near-uniform polar angles (the PolarQuant-style
-    worked example).
-"""
+"""Sample angle priors and convert rotated data to polar angles."""
 
 from __future__ import annotations
 
@@ -27,20 +17,13 @@ def sample_clustered(rng: np.random.Generator, m: int, n: int, eps: float) -> np
 
 
 def sample_raw(rng: np.random.Generator, m: int, n: int, eps: float) -> np.ndarray:
-    """Raw, un-preconditioned angles clustered near {0, pi} (bit*pi + N(0, eps^2)).
-
-    The encoded states sit near distinct computational-basis states, so the
-    off-diagonal g-purity collapses (barren) while the inputs stay spread."""
+    """Sample angles near {0, pi} with Gaussian width ``eps``."""
     b = rng.integers(0, 2, size=(m, n)) * np.pi
     return b + rng.normal(0.0, eps, size=(m, n))
 
 
 def anisotropic_data(rng: np.random.Generator, m: int, d: int, rho: float = 0.97) -> np.ndarray:
-    """m points in R^d whose coordinate pairs are strongly correlated
-    (corr ``rho``), standing in for raw, non-isotropic features: each pair's
-    polar angle then clusters near pi/4 (and 5pi/4), so the raw angle prior is
-    far from uniform.  Isotropic preconditioning (a random rotation) destroys
-    this structure."""
+    """Sample m feature vectors with within-pair correlation ``rho``."""
     assert d % 2 == 0
     a = rng.normal(size=(m, d // 2))
     b = rho * a + np.sqrt(1 - rho**2) * rng.normal(size=(m, d // 2))
@@ -63,11 +46,7 @@ def polar_angles(x: np.ndarray) -> np.ndarray:
 
 
 def isotropic_precondition(rng: np.random.Generator, x: np.ndarray) -> np.ndarray:
-    """Apply one random rotation Q in SO(d) to every row, then read off the
-    polar angles of the n = d/2 coordinate pairs (shape (m, n)).
-
-    Rotational invariance in each coordinate plane makes the resulting angles
-    near-uniform on [0, 2pi)."""
+    """Rotate all rows by one random SO(d) matrix and return polar angles."""
     d = x.shape[1]
     Q = special_ortho_group.rvs(dim=d, random_state=rng)
     return polar_angles(x @ Q.T)

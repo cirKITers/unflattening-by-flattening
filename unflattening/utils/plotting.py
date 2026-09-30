@@ -1,7 +1,4 @@
-"""Shared plotting setup: writes PGF plus a PNG preview. 
-Figures go to the repo-root ``figures/`` directory; numeric
-outputs to the repo-root ``data/`` directory.
-"""
+"""Shared figure style and PGF/PNG export to the repository's figures/ directory."""
 
 from __future__ import annotations
 
@@ -100,16 +97,10 @@ def ordinal_colors(k):
 
 
 def unify_grid(ax, *twins):
-    """Consistent grid for the paper's log panels: major gridlines only (one per decade
-    on a log axis, at the major ticks on a linear axis) and no minor gridlines, on the
-    primary ``ax``.  Any twin/secondary axes get ticks and labels but no gridlines: the
-    secondary scale is not a fixed rescaling of the primary (Var/P differs per curve and
-    per n, and |Omega| is unrelated to the purity), so a shared gridline would imply a
-    correspondence that does not exist.
+    """Show major gridlines on the primary axis and disable twin-axis grids.
 
-    The log y-axis uses an every-other-decade locator so the horizontal-line density is
-    the same on every panel regardless of its span (the default locator auto-thins by
-    axis height, which makes narrow panels denser than wide ones)."""
+    Log y-axes use every other decade to keep grid density consistent.
+    """
     ax.minorticks_off()
     if ax.get_yscale() == "log":
         ax.yaxis.set_major_locator(LogLocator(base=100.0))

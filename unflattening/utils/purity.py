@@ -1,9 +1,4 @@
-"""g-purity of angle-encoded product states.
-
-Two routes:
-  * ``g_purity_closed_form``: evaluated by an O(n) recurrence (vectorised over a batch of angle configurations);
-  * ``g_purity_from_basis``: sum_{B in basis(i g)} <B>^2, evaluated on an explicit statevector
-"""
+"""Compute product-state g-purity by closed form or explicit basis sum."""
 
 from __future__ import annotations
 

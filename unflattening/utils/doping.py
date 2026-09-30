@@ -1,19 +1,7 @@
-"""Magic / non-Gaussian doping of the matchgate ansatz
+"""Insert parameterized RZZ gates into matchgate brickwork circuits.
 
-The matchgate LASA (``Ansaetze.Matchgate``) realises a 2-design on e^g = SO(2n) and
-is classically simulable.  We *dope* it with ``t`` two-qubit ZZ rotations
-``RZZ(phi) = exp(-i phi/2 Z_a Z_b)``.  Under Jordan-Wigner Z_a Z_b is *quartic*
-in Majorana operators, hence outside the quadratic algebra g = so(2n): each RZZ
-is a genuine non-Gaussian ("fermionic magic") gate, the canonical non-matchgate
-insertion (cf. the SWAP/CZ/CPhase universality-enabling gates of Jozsa-style
-extensions).  The doping angles are *parameters* of the ansatz, so the loss
-variance below is taken over the full doped ensemble.
-
-This module mirrors ``qml_essentials.trainability.loss_variance`` but threads ``t`` extra RZZ gates,
-with their own random angles, into the brickwork at deterministic, spread-out
-(layer, bond) positions.  ``doping_generators`` returns the ZZ Pauli strings so
-the doped DLA dimension can be read off via ``dla.lie_closure``.
-"""
+The ZZ generators extend the matchgate Lie algebra; sampled loss variance
+includes both matchgate and RZZ parameters."""
 
 from __future__ import annotations
 
@@ -29,12 +17,7 @@ from qml_essentials.ansaetze import Ansaetze
 
 
 def doping_positions(n: int, depth: int, t: int) -> list[tuple[int, tuple[int, int]]]:
-    """``t`` deterministic insertion points ``(after_layer_d, (a, b))``.
-
-    Spread in time (layers evenly across the brickwork) and space (cycling
-    through the nearest-neighbour bonds), so the doping is not concentrated in
-    one place.  Returns ``[]`` for ``t == 0`` (the pure matchgate baseline).
-    """
+    """Place t insertions across layers and nearest-neighbor bonds."""
     if t <= 0 or n < 2:
         return []
     positions = []
@@ -46,9 +29,7 @@ def doping_positions(n: int, depth: int, t: int) -> list[tuple[int, tuple[int, i
 
 
 def doping_generators(n: int, positions) -> list[str]:
-    """The distinct ZZ Pauli strings injected at ``positions`` (for the DLA
-    closure ``dla.lie_closure(matchgate_generators(n) + doping_generators(...))``).
-    """
+    """Return the distinct ZZ strings inserted at ``positions``."""
     gens = set()
     for _, (a, b) in positions:
         s = ["I"] * n
@@ -67,11 +48,9 @@ def doped_loss_variance(
     out_qubit: int | None = None,
     shots: int | None = None,
 ):
-    """Empirical Var_W[<Z_i>] for the matchgate brickwork doped with ``t`` RZZ
-    gates, sampling W ~ U[0, 2pi) over *all* params (matchgate + doping angles).
+    """Sample output variance over all matchgate and RZZ parameters.
 
-    Args mirror ``qml_essentials.trainability.loss_variance``; ``t`` is the number of non-Gaussian
-    RZZ insertions.  Returns ``(variance, losses)``.
+    Returns ``(variance, losses)`` for ``t`` RZZ insertions.
     """
     theta = jnp.asarray(theta, dtype=float)
     n = int(theta.shape[0])
