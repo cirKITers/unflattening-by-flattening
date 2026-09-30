@@ -1,24 +1,8 @@
-"""Figure generation from the experiments' CSV outputs.
+"""Render the experiment CSV files as PGF figures and PNG previews.
 
-The experiments in ``unflattening/experiments/`` only compute numbers and write
-plain CSV files to the repo-root ``data/`` directory; every figure is drawn here,
-reading nothing but those CSVs.  So the pipeline is
-
-    experiment  ->  data/<name>.csv  ->  figures/<name>.pgf (+ .png)
-
-and the figures can be regenerated without re-running (or even having) the
-experiment code: ``python -m unflattening.figures [name ...]``.
-
-To use this in another project, copy this file plus ``utils/plotting.py`` (the
-style/palette definitions) and adjust the one ``unflattening.utils.plotting``
-import.  Dependencies are numpy and matplotlib only.
-
-Scalars that a figure needs (fit rates, DLA dimensions, annotation values) are
-stored as constant columns repeated down the main CSV; ragged columns are
-tail-padded with empty cells.  Everything comes back from CSV as float64, hence
-the ``int(...)`` casts at the sites where a value ends up in label text or in
-integer arithmetic.
-"""
+Experiments write numeric results to data/. Run this module to redraw figures
+from those CSV files without rerunning the experiments. CSV columns may contain
+repeated scalars or trailing empty cells for shorter series."""
 
 from __future__ import annotations
 
@@ -32,8 +16,7 @@ from unflattening.utils import plotting
 from unflattening.utils.plotting import (plt, DATA_DIR, GREY_FILL, GREY_REF,
                                          TEAL, ORANGE, ACCENT, NAVY)
 
-# encoding_landscape / encoding_mean styling (mirrors ENCODINGS/_LSTYLE in
-# exp_encoding_weights, colours only -- no qml_essentials dependency here).
+# Figure-only styling for the encoding landscapes and means.
 ENC_KINDS = ("hamming", "binary", "ternary")
 ENC_COLOR = {"hamming": ORANGE, "binary": TEAL, "ternary": ACCENT}
 _LSTYLE = {  # ternary spans 3^n freqs: thin/faint/behind, hamming on top
@@ -57,8 +40,7 @@ def _fmt(v) -> str:
 
 
 def write_csv(stem: str, cols: dict) -> None:
-    """Write ``data/<stem>.csv``.  Array values become columns, scalars become
-    constant columns, and short columns are tail-padded with empty cells."""
+    """Write columns to data/, repeating scalars and padding short columns."""
     cells, n_rows = {}, 0
     for key, val in cols.items():
         if isinstance(val, np.ndarray) and val.ndim == 0:
@@ -80,8 +62,7 @@ def write_csv(stem: str, cols: dict) -> None:
 
 
 def read_csv(stem: str) -> dict:
-    """``data/<stem>.csv`` as a dict of arrays: float64, or object for text
-    columns.  Trailing empty cells (ragged columns) are dropped."""
+    """Read data/<stem>.csv, dropping trailing empty cells in each column."""
     with open(DATA_DIR / f"{stem}.csv", newline="") as fh:
         rows = list(csv.reader(fh))
     header, body = rows[0], rows[1:]
