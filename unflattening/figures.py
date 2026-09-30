@@ -10,7 +10,7 @@ import csv
 import sys
 
 import numpy as np
-from matplotlib.ticker import LogFormatterSciNotation
+from matplotlib.ticker import LogFormatterSciNotation, LogLocator
 
 from unflattening.utils import plotting
 from unflattening.utils.plotting import (plt, DATA_DIR, GREY_FILL, GREY_REF,
@@ -95,7 +95,7 @@ def fig_dla_regime_contrast() -> None:
     ax.plot(ns, np.exp(np.polyval([exp_rate, np.log(var_ge[0]) - exp_rate * ns[0]], ns)),
             "--", color=ORANGE, lw=0.9, label=f"$\\propto e^{{{exp_rate:.2f}\\,n}}$")
     ax.set_yscale("log")
-    ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
+    ax.set_xlabel("$n$ qubits"); ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
     ax.locator_params(axis="x", integer=True)
     plotting.top_legend(ax, ncol=2)
     plotting.save(fig, "dla_regime_contrast")
@@ -111,7 +111,7 @@ def fig_matchgate_convergence() -> None:
         ax.axhline(float(d["pred"][m][0]), color=series[j], ls="--", lw=1.0,
                    label=(r"$\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$" if j == 0 else None))
     ax.set_xscale("log", base=2); ax.set_yscale("log")
-    ax.set_xlabel("MGA Depth")
+    ax.set_xlabel("MGA depth")
     ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
     # legend with the analytic entry first
     handles, labels = ax.get_legend_handles_labels()
@@ -126,7 +126,7 @@ def fig_matchgate_scaling() -> None:
     ns, emp, pred, lo, hi = d["n"], d["empirical"], d["analytic"], d["lo"], d["hi"]
 
     fig, ax = plt.subplots(figsize=(plotting.COL, 2.6))
-    ax.fill_between(ns, lo, hi, color=GREY_FILL, label="Proven Range")
+    ax.fill_between(ns, lo, hi, color=GREY_FILL, label="Proven range")
     ax.plot(ns, pred, "-", color=TEAL, label=r"$\mathcal{P}_{\mathfrak{g}}/\dim\mathfrak{g}$")
     ax.plot(ns, emp, "o", color=NAVY, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$", zorder=5)
     ax.set_xscale("log", base=2); ax.set_yscale("log")
@@ -134,9 +134,9 @@ def fig_matchgate_scaling() -> None:
     ax.set_yticks([6e-2, 1e-1, 2e-1, 3e-1])
     ax.set_yticks([], minor=True)
     ax.yaxis.set_major_formatter(LogFormatterSciNotation())
-    ax.set_xlabel("$n$ Qubits")
+    ax.set_xlabel("$n$ qubits")
     ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
-    plotting.top_legend(ax, ncol=3)
+    plotting.top_legend(ax, ncol=2)
     plotting.save(fig, "matchgate_scaling")
 
 
@@ -145,11 +145,11 @@ def fig_uniform_prior_mean() -> None:
     ns, emp, ana, lo, hi = d["n"], d["empirical"], d["analytic"], d["lo"], d["hi"]
 
     fig, ax = plt.subplots(figsize=(plotting.COL, 1.9))
-    ax.fill_between(ns, lo, hi, color=GREY_FILL, label="Proven Range")
+    ax.fill_between(ns, lo, hi, color=GREY_FILL, label="Proven range")
     ax.plot(ns, ana, "-", color=TEAL, label=r"$n-1+2^{-n}$ (analytic mean)")
-    ax.plot(ns, emp, "o", color=NAVY, label="Empirical Mean", zorder=5)
+    ax.plot(ns, emp, "o", color=NAVY, label="Empirical mean", zorder=5)
     ax.set_yscale("log")
-    ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$\mathcal{P}_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
+    ax.set_xlabel("$n$ qubits"); ax.set_ylabel(r"$\mathcal{P}_{\mathfrak{g}}(\rho(\boldsymbol{\phi}))$")
     plotting.top_legend(ax, ncol=2)
     plotting.save(fig, "uniform_prior_mean")
 
@@ -165,7 +165,7 @@ def fig_preconditioning_effect() -> None:
             color=ORANGE, label="Raw")
     ax.hist(d["bin_left"], bins=bins, weights=d["density_pre"], histtype="step",
             color=TEAL, label="Preconditioned")
-    ax.set_xlabel(r"Polar Angle $\phi$"); ax.set_ylabel("Density")
+    ax.set_xlabel(r"Polar angle $\phi$"); ax.set_ylabel("Density")
     ax.set_xlim(0, 2 * np.pi)
     ax.set_xticks(np.linspace(0, 2 * np.pi, 5))
     ax.set_xticklabels(["$0$", r"$\pi/2$", r"$\pi$", r"$3\pi/2$", r"$2\pi$"])
@@ -185,7 +185,7 @@ def fig_input_purity_scaling() -> None:
     ax.plot(ns, var_prod[0] * ns[0] / ns, ":", color=GREY_REF, label=r"$\propto 1/n$")
     ax.plot(ns, 1.0 / (2**ns + 1), "--", color=ORANGE, lw=0.9, label=r"$1/(2^n+1)$")
     ax.set_yscale("log")
-    ax.set_xlabel("$n$ Qubits"); ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
+    ax.set_xlabel("$n$ qubits"); ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
     ax.locator_params(axis="x", integer=True)
     plotting.top_legend(ax, ncol=2)
     plotting.save(fig, "input_purity_scaling")
@@ -209,9 +209,9 @@ def fig_doping_variance() -> None:
                 label=f"$t={t}$" + (" (mg)" if t == 0 else ""))
     a0.plot(ns, var[0][0] * ns[0] / ns, ":", color=GREY_REF, label=r"$\propto 1/n$")
     a0.set_xscale("log"); a0.set_yscale("log")
-    a0.set_xlabel("$n$ Qubits")
+    a0.set_xlabel("$n$ qubits")
     a0.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
-    a0.legend(loc="lower left", ncol=2, fontsize=8)
+    a0.legend(loc="lower left", ncol=2)
     # (b) fixed-n decay in t: Var ~ c^{-t} (Eq. doping-decay), rate ~ n-independent.
     idx = list(ns.astype(int))
     reps = [k for k in (6, 8, 10) if k in idx] or [idx[-1]]
@@ -219,13 +219,13 @@ def fig_doping_variance() -> None:
         i = idx.index(k)
         a1.semilogy(ts, [var[t][i] for t in ts], "o-", label=f"$n={k}$")
     a1.semilogy(ts, var[0][idx.index(reps[-1])] * c_fit ** (-np.array(ts, float)),
-                "k--", lw=1.0, label=rf"$\propto c^{{-t}}$ ($c\approx{c_fit:.2f}$)")
-    a1.set_xlabel("non-Gaussian gates $t$")
+                "--", color=GREY_REF, lw=1.0, label=rf"$\propto c^{{-t}}$ ($c\approx{c_fit:.2f}$)")
+    a1.set_xlabel("Non-Gaussian gates $t$")
     a1.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle Z_i\rangle]$")
     a1.set_xticks(ts)
     a1.set_title(f"DLA dim {dim_mg}" + r"$\,\to\,$" + f"{dim_doped} (1 ZZ gate)",
                  fontsize=8.5)
-    a1.legend(loc="lower left", fontsize=8)
+    a1.legend(loc="lower left")
     plotting.save(fig, "doping_variance")
 
 
@@ -238,12 +238,12 @@ def fig_precondition_training() -> None:
     gv_raw, gv_raw_lo, gv_raw_hi = d["gradvar_raw"], d["gradvar_raw_lo"], d["gradvar_raw_hi"]
 
     fig, ax = plt.subplots(figsize=(plotting.COL, 2.6))
-    ax.plot(epoch_axis, rel_pre, "-", color=TEAL)
+    ax.plot(epoch_axis, rel_pre, "-", color=TEAL, label="Uniform prior")
     ax.fill_between(epoch_axis, np.clip(rel_pre - rel_pre_sd, 0, None), rel_pre + rel_pre_sd,
-                    color=TEAL, alpha=0.2, lw=0)
-    ax.plot(epoch_axis, rel_raw, "-", color=ORANGE)
+                    color=TEAL, alpha=0.2, lw=0, label="Uniform prior")
+    ax.plot(epoch_axis, rel_raw, "-", color=ORANGE, label="Clustered prior")
     ax.fill_between(epoch_axis, np.clip(rel_raw - rel_raw_sd, 0, None), rel_raw + rel_raw_sd,
-                    color=ORANGE, alpha=0.2, lw=0)
+                    color=ORANGE, alpha=0.2, lw=0, label="Clustered prior")
     ax.set_xlabel("Epoch")
     ax.set_ylabel(r"$\mathcal{L}/\mathcal{L}_0$")
 
@@ -261,12 +261,10 @@ def fig_precondition_training() -> None:
 
     # legend outside on top (as in fig8/fig9): colour = input law, style = quantity.
     from matplotlib.lines import Line2D
-    handles = [Line2D([], [], color=TEAL, ls="-", label="Uniform prior"),
-               Line2D([], [], color=ORANGE, ls="-", label="Clustered prior"),
-               Line2D([], [], color="0.4", ls="-", label=r"Loss $\mathcal{L}/\mathcal{L}_0$"),
-               Line2D([], [], color="0.4", ls="--", label="Gradient dispersion")]
-    plotting.top_legend(ax, handles=handles,
-                        labels=[h.get_label() for h in handles], ncol=2)
+    handles, labels = ax.get_legend_handles_labels()  # line + band per prior
+    handles += [Line2D([], [], color=GREY_REF, ls="-"), Line2D([], [], color=GREY_REF, ls="--")]
+    labels += [r"Loss $\mathcal{L}/\mathcal{L}_0$", "Gradient dispersion"]
+    plotting.top_legend(ax, handles=handles, labels=labels, ncol=2)
     plotting.save(fig, "precondition_training")
 
 
@@ -286,7 +284,7 @@ def fig_reuploading_depth() -> None:
         mean = dat.mean(axis=1)
         lo, hi = np.quantile(dat, 0.1, axis=1), np.quantile(dat, 0.9, axis=1)
         ax.plot(depths, mean, "o" + ls, color=color, ms=3.5, lw=1.1, label=label)
-        ax.fill_between(depths, lo, hi, color=color, alpha=0.15, lw=0)
+        ax.fill_between(depths, lo, hi, color=color, alpha=0.15, lw=0, label=label)
     ax.set_yscale("log")
     ax.set_xlabel(r"Re-uploading depth $L$")
     ax.set_ylabel(r"$\mathrm{Var}_{\boldsymbol{\theta}}[\langle O\rangle]$")
@@ -363,10 +361,10 @@ def fig_latent_drift() -> None:
 
     from matplotlib.lines import Line2D
     handles = [Line2D([], [], color=c, ls="-", label=lab) for _, c, lab in _DRIFT_SERIES]
-    handles += [Line2D([], [], color="0.4", ls="-", label="Circuit"),
-                Line2D([], [], color="0.4", ls="--", label="MLP")]
+    handles += [Line2D([], [], color=GREY_REF, ls="-", label="Circuit"),
+                Line2D([], [], color=GREY_REF, ls="--", label="MLP")]
     plotting.top_legend(a0, handles=handles, labels=[h.get_label() for h in handles],
-                        ncol=2, fontsize=7.5)
+                        ncol=2)
     plotting.save(fig, "latent_drift")
 
 
@@ -458,7 +456,7 @@ def fig_channel_scaling() -> None:
         # square-root prediction for the encoder, from the measured circuit channel
         a1.plot(ns, np.sqrt(s_circ), ":", color=color, lw=0.9, alpha=0.7)
     a1.set_yscale("log")
-    a1.set_xlabel("$n$ Qubits")
+    a1.set_xlabel("$n$ qubits")
     a1.set_ylabel(r"Suppression $\mathrm{Var}^{\mathrm{unif}}/\mathrm{Var}^{\mathrm{clus}}$")
     a1.text(0.03, 0.96, rf"(b) $\sigma={sigma_fixed}$", fontsize=8.5, ha="left",
             va="top", transform=a1.transAxes)
@@ -468,11 +466,10 @@ def fig_channel_scaling() -> None:
     from matplotlib.lines import Line2D
     handles = [Line2D([], [], color=c, ls="-", marker="o", ms=3, label=lab)
                for _, c, lab in _CHANNEL_SERIES]
-    handles += [Line2D([], [], color="0.4", ls="-", marker="o", ms=3, label="Circuit"),
-                Line2D([], [], color="0.4", ls="--", marker="s", ms=3, label="Encoder"),
-                Line2D([], [], color="0.4", ls=":", lw=0.9, label=r"$\sqrt{\;\cdot\;}$ / guide")]
-    plotting.top_legend(a0, handles=handles, labels=[h.get_label() for h in handles],
-                        ncol=3, fontsize=7.5)
+    handles += [Line2D([], [], color=GREY_REF, ls="-", marker="o", ms=3, label="Circuit"),
+                Line2D([], [], color=GREY_REF, ls="--", marker="s", ms=3, label="Encoder"),
+                Line2D([], [], color=GREY_REF, ls=":", lw=0.9, label=r"$\sqrt{\;\cdot\;}$ / guide")]
+    fig.legend(handles=handles, loc="outside upper center", ncol=3)  # spans both panels
     plotting.save(fig, "channel_scaling")
 
 
@@ -508,11 +505,11 @@ def fig_encoding_mean() -> None:
         color = ENC_COLOR[kind]
         axB.plot(ns, mean_u[kind], "o-", color=color, ms=3, lw=1.1, label=kind.capitalize())
         axB.plot(ns, np.maximum(mean_c[kind], 1e-7), "s--", color=color, ms=3, lw=1.1)
-    axB.plot(ns, iid, ":", color=GREY_REF, lw=1.3, zorder=0, label=r"IID mean")
-    axB.plot([], [], "o-", color="0.4", ms=3, lw=1.1, label=r"Uniform $x$")
-    axB.plot([], [], "s--", color="0.4", ms=3, lw=1.1, label=r"Clustered $x$")
+    axB.plot(ns, iid, ":", color=GREY_REF, lw=1.3, zorder=0, label=r"i.i.d. mean")
+    axB.plot([], [], "o-", color=GREY_REF, ms=3, lw=1.1, label=r"Uniform $x$")
+    axB.plot([], [], "s--", color=GREY_REF, ms=3, lw=1.1, label=r"Clustered $x$")
     axB.set_yscale("log")
-    axB.set_xlabel("$n$ Qubits")
+    axB.set_xlabel("$n$ qubits")
     axB.set_ylabel(r"$\mathbb{E}_x[\mathcal{P}_{\mathfrak{g}}]$")
     axB.locator_params(axis="x", integer=True)
 
@@ -525,7 +522,7 @@ def fig_encoding_mean() -> None:
     for kind in ENC_KINDS:
         axf.plot(ns, n_freqs[kind], ":", color=ENC_COLOR[kind], lw=0.9, alpha=0.8)
     axf.set_yscale("log")
-    axf.set_ylabel(r"number of frequencies $|\Omega|$")
+    axf.set_ylabel(r"Number of frequencies $|\Omega|$")
 
     plotting.unify_grid(axB, axf)                          # major decade grid on the primary axis only
     plotting.top_legend(axB, ncol=3)
@@ -544,7 +541,7 @@ def fig_offdiag_purity() -> None:
     # upper (uniform) and lower (clustered) panel sharing x, clip each curve to its band,
     # and drop the middle so the two traces sit close across the break.
     fig, (axhi, axlo) = plt.subplots(
-        2, 1, sharex=True, figsize=(plotting.COL, 2.6),
+        2, 1, sharex=True, figsize=(plotting.COL, 2.3),
         gridspec_kw={"height_ratios": [1, 1]})
     fig.get_layout_engine().set(hspace=0.0, h_pad=0.02)    # close the broken-axis gap
     for a in (axhi, axlo):
@@ -558,7 +555,7 @@ def fig_offdiag_purity() -> None:
     axlo.set_ylim(5e-7, 1.2e-4)                            # clustered band
 
     # proxy for the dashed variance curves; on axhi so top_legend(axhi) actually picks it up
-    axhi.plot([], [], "--", color=NAVY, lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")
+    axhi.plot([], [], "--", color=GREY_REF, lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")
     axhi_v, axlo_v = axhi.twinx(), axlo.twinx()            # variance on the right axis (dashed)
     nonabelian = ns >= 3  # n=2 has zero variance, omitted on logarithmic axes
     for av in (axhi_v, axlo_v):
@@ -581,7 +578,7 @@ def fig_offdiag_purity() -> None:
     axhi.plot([0, 1], [0, 0], transform=axhi.transAxes, **brk)
     axlo.plot([0, 1], [1, 1], transform=axlo.transAxes, **brk)
 
-    axlo.set_xlabel("$n$ Qubits")
+    axlo.set_xlabel("$n$ qubits")
     axlo.locator_params(axis="x", integer=True)
     axlo.set_ylabel(r"$\mathbb{E}_{\boldsymbol{\phi}}[\mathcal{P}_{\mathfrak{g}}]$")
     axlo.yaxis.set_label_coords(-0.19, 1.0)                # centre the shared label across the break, clear of the ticks
@@ -598,11 +595,11 @@ def fig_purity_regime_contrast() -> None:
     var_mg, var_od = d["var_matchgate"], d["var_offdiag"]
     n = int(d["n"][0])
 
-    fig, ax = plt.subplots(figsize=(plotting.COL, 1.9))    # flatter plot box, matches fig:hollow aspect
+    fig, ax = plt.subplots(figsize=(plotting.COL, 2.4))    # flatter plot box, matches fig:hollow aspect
     ax.axhline(n, color=GREY_REF, ls=":", lw=0.9)          # d_Z = n, matchgate clustered limit
     ax.plot(sigmas, mg, "o-", color=TEAL, ms=3.5, label=r"Matchgate ($d_Z{=}n$)")
     ax.plot(sigmas, od, "o-", color=ORANGE, ms=3.5, label=r"Off-diagonal ($d_Z{=}0$)")
-    ax.plot([], [], "--", color="0.35", lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")  # dashed = variance
+    ax.plot([], [], "--", color=GREY_REF, lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")  # dashed = variance
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
@@ -612,19 +609,20 @@ def fig_purity_regime_contrast() -> None:
     axv.plot(sigmas, var_mg, "--", color=TEAL, lw=1.1)
     axv.plot(sigmas, var_od, "--", color=ORANGE, lw=1.1)
     axv.set_yscale("log")
+    axv.yaxis.set_major_locator(LogLocator(base=100.0))   # every other decade, like the left axis
     axv.set_ylabel(r"$\mathbb{E}_{\boldsymbol{\phi}}[\mathrm{Var}_{\boldsymbol{\theta}} f]$")
 
     plotting.unify_grid(ax, axv)                            # major decade grid on the primary axis only
-    ax.legend(loc="lower right", fontsize=7.5)
+    plotting.top_legend(ax, ncol=2)
     plotting.save(fig, "purity_regime_contrast")
 
 
 # hollow_dimension / hollow_sweep share this series definition: label, colour,
 # marker, hollow (filled marker) flag, and the family key used in both CSVs.
 _HOLLOW_SERIES = (
-    (r"Off-diagonal ($d_Z{=}0$)", ACCENT, "o", True, "g_od", "hollow_scan"),
-    (r"+ Bipartite ($d_Z{=}0$)", TEAL, "o", True, "chord(1,4)", "hollow_graphs"),
-    (r"+ Doped chain ($d_Z{=}0$)", NAVY, "o", True, "+XIY", "hollow_scan"),
+    (r"Off-diagonal", ACCENT, "o", True, "g_od", "hollow_scan"),
+    (r"+ Bipartite", TEAL, "o", True, "chord(1,4)", "hollow_graphs"),
+    (r"+ Doped chain", NAVY, "o", True, "+XIY", "hollow_scan"),
     (r"+ Odd cycle ($d_Z{>}0$)", ORANGE, "o", False, "chord(0,2)", "hollow_graphs"),
 )
 
@@ -639,9 +637,9 @@ def fig_hollow_dimension() -> None:
         d = src[table]
         m = d["family"] == key
         a0.semilogy(d["n"][m], d["dim"][m], mk + "-", color=col, label=label, **fill)
-    a0.set_xlabel("$n$ Qubits")
+    a0.set_xlabel("$n$ qubits")
     a0.set_ylabel(r"$\dim\mathfrak{g}$")
-    a0.legend(loc="upper left", fontsize=7.5)
+    a0.legend(loc="upper left")
     plotting.save(figd, "hollow_dimension")
 
 
@@ -657,11 +655,11 @@ def fig_hollow_sweep() -> None:
         fill = dict() if hollow else dict(markerfacecolor="white")
         a1.plot(sigmas, d[key], mk + "-", color=col, label=label, ms=3.5, **fill)
     a1.axhline(dZ, color=GREY_REF, ls=":", lw=0.9)
-    a1.text(0.04, dZ * 1.6, rf"$d_Z={dZ}$", fontsize=7.5, color=GREY_REF)
-    a1.plot([], [], "--", color="0.35", lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")
+    a1.text(0.04, dZ * 2.5, rf"$d_Z={dZ}$", fontsize=7.5, color=GREY_REF)
+    a1.plot([], [], "--", color=GREY_REF, lw=1.1, label=r"$\mathrm{Var}_{\boldsymbol{\theta}}$")
     a1.set_xscale("log")
     a1.set_yscale("log")
-    a1.set_ylim(top=dZ * 6)
+    a1.set_ylim(top=dZ * 12)
     a1.set_xlabel(r"Angle spread $\sigma$ (clustered $\to$ uniform)")
     a1.set_ylabel(r"$\mathbb{E}_{\boldsymbol{\phi}}[\mathcal{P}_{\mathfrak{g}}]$")
 
@@ -675,8 +673,7 @@ def fig_hollow_sweep() -> None:
     axv.set_ylabel(r"$\mathbb{E}_{\boldsymbol{\phi}}[\mathrm{Var}_{\boldsymbol{\theta}} f]$")
     plotting.unify_grid(a1, axv)                            # major decade grid on the primary axis only
 
-    plotting.top_legend(a1, ncol=2, fontsize=7.5, handlelength=1.2,
-                        handletextpad=0.4, labelspacing=0.3, columnspacing=1.0)
+    plotting.top_legend(a1, ncol=3)
     plotting.save(figs, "hollow_sweep")
 
 

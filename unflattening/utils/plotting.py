@@ -82,7 +82,7 @@ WIDE = 7.0
 
 # Neutral greys for non-data elements (kept out of the colour cycle).
 GREY_FILL = "0.85"      # proven-range / band fill_between
-GREY_REF = "#999999"    # COLOURS.LIST[3] grey -- reference / guide lines
+GREY_REF = "0.4"        # guide lines and colour-neutral legend entries (line style)
 
 # Sequential cool ramp (teal -> blue -> navy) for an *ordinal* sweep -- a doping
 # count t, a qubit count n, a depth.  Monotone-cool so it reads as an order and
@@ -112,9 +112,19 @@ def unify_grid(ax, *twins):
 
 
 def top_legend(ax, handles=None, labels=None, ncol=None, **kw):
-    """Compact, frameless legend above the panel (R theme_paper_base)."""
+    """Compact, frameless legend above the panel (R theme_paper_base).
+
+    Artists sharing a label (e.g. a line and its shaded band) are overlaid in
+    one entry, drawn in zorder like on the axes.
+    """
     if handles is None:
         handles, labels = ax.get_legend_handles_labels()
+    merged = {}
+    for h, lab in zip(handles, labels):
+        merged.setdefault(lab, []).append(h)
+    labels = list(merged)
+    handles = [tuple(sorted(hs, key=lambda h: h.get_zorder())) if len(hs) > 1 else hs[0]
+               for hs in merged.values()]
     if ncol is None:
         ncol = len(labels)
     ax.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 1.02),
