@@ -211,7 +211,7 @@ def part_figure(res: dict, X: dict, n_qubits: int = N_QUBITS, epochs: int = EPOC
 
     # -- the experiment's outcomes: printed, not asserted.  These are what is being
     # measured, so pinning them with a threshold up front would only bake in the
-    # prediction.  TODO: harden the ones that survive a second seed set.
+    # prediction.
     pr, pu = res["od_raw"]["pur"].mean(0), res["od_unif"]["pur"].mean(0)
     print(f"  [pred 1 chain-rule trap] od_raw: P^ {pr[0]:.2e} -> {pr[-1]:.3f} "
           f"({pr[-1] / pr[0]:.1e}x), L/L0 -> {res['od_raw']['rel'].mean(0)[-1]:.3f}"
@@ -225,7 +225,7 @@ def part_figure(res: dict, X: dict, n_qubits: int = N_QUBITS, epochs: int = EPOC
     for key, _, _ in ARMS:  # runaway-wrapping guard for the histogram reading
         d = res[key]["drift"].mean(0)[-1]
         print(f"  [drift guard] {key}: mean |phi-x| = {d:.2f} rad"
-              + ("   TODO: exceeds 2pi, histograms may be wrap-dominated" if d > 2 * np.pi else ""))
+              + ("   WARNING: exceeds 2pi, histograms may be wrap-dominated" if d > 2 * np.pi else ""))
 
     # -- main CSV: per-arm curves vs epoch
     cols = dict(epoch=np.arange(1, epochs + 1))

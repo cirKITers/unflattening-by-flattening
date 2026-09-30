@@ -546,7 +546,7 @@ def fig_offdiag_purity() -> None:
     fig, (axhi, axlo) = plt.subplots(
         2, 1, sharex=True, figsize=(plotting.COL, 2.6),
         gridspec_kw={"height_ratios": [1, 1]})
-    fig.get_layout_engine().set(hspace=0.0, h_pad=0.02)    # close the broken-axis gap (todo: less whitespace)
+    fig.get_layout_engine().set(hspace=0.0, h_pad=0.02)    # close the broken-axis gap
     for a in (axhi, axlo):
         lbl = a is axhi                                    # legend handles from the upper panel only
         a.plot(ns_b, mean_brute, "+", color=NAVY, ms=7, mew=1.4, zorder=5,
