@@ -1,17 +1,9 @@
-"""bp_contrast -- the conditional thesis: a polynomial DLA is *not* sufficient.
+"""Compare output variance for polynomial and full-dimensional circuit algebras.
 
-Same encoding-as-readout pipeline and the same JAQSI harness as in exp_theorem1, but the
-ansatz U(W) is swapped:
-  * matchgate LASA (polynomial DLA so(2n))      -> Var_W = Theta(1/n)   (BP-free);
-  * Strongly_Entangling (full DLA su(2^n))       -> Var_W ~ exp(-c n)    (barren).
-
-The input state rho(Theta) and observable Z_i are identical; only the circuit's
-DLA differs.  This is the numerical face of Eq. (ragone): trainability is set by
-the 1/dim(g_j) weighting, exponential for the full-rank ansatz, polynomial for
-the matchgate one.
-
-Figures: dla_regime_contrast (single panel: Var vs n with poly/exp reference lines).
-"""
+Keep the RY product input and Z readout fixed while changing the ansatz from
+matchgate (polynomial Lie algebra) to Strongly_Entangling (full algebra).
+The qubit-count sweep compares roughly inverse-polynomial and exponential
+variance decay in the dla_regime_contrast figure."""
 
 from __future__ import annotations
 

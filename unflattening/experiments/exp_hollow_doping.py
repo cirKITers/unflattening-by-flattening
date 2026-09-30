@@ -1,40 +1,10 @@
-"""hollow_doping -- open question 1 (Discussion): can a non-Gaussian family stay
-floor-free (d_Z = 0)?
+"""Search for large off-diagonal algebras with no Z-diagonal purity floor.
 
-Answer explored here: YES.  Three parts.
-
-(A) Dopant scan.  Add one translation-invariant hollow (non-Z-diagonal) Pauli
-    string family to the off-diagonal generators {X_kX_{k+1}, Y_kY_{k+1}} and
-    compute the Pauli-string Lie closure:
-      * dim(n) growth, d_Z(n) = #Z-type strings, #non-JW-bilinear strings,
-      * mean uniform-prior input purity  E[P] = sum_{XZ-only B} 2^{-|supp B|}.
-    The scan covers ALL sixteen translation-invariant dopants of range <= 3
-    (four two-site NNN types, eight contiguous three-site types, four
-    Z-containing two-site types), plus XXXX as a range-4 probe.
-    Headline: exactly the two XY-type NNN dopants X_k Y_{k+2} and Y_k X_{k+2}
-    keep d_Z = 0 while exploding the DLA to dim = 4^{n-1} - 2^{n-1}
-    = dim so(2^{n-1}) + so(2^{n-1}); every other one of the sixteen either
-    stays Gaussian or restores an exponential floor.  No 2-local NN dopant is
-    simultaneously non-Gaussian and hollow.  The +XIY closure is additionally
-    verified at n = 9 (dim 65280, d_Z = 0).
-
-(B) XY interaction {XX_e, YY_e} on graphs.  Bipartite graphs with a vertex of
-    degree > 2 give exponential so/su-type DLAs (Koekcue et al., arXiv:2409.19797)
-    that are universal (Brod & Childs, arXiv:1308.1463) and, numerically, d_Z = 0.
-    Odd chords (non-bipartite) restore d_Z > 0: a bipartiteness dichotomy for
-    the floor.
-
-(C) Variance validation at n = 6 for g_h = <{XX,YY}, {XIY}>: the two-ideal LASA
-    formula Var_W[<X_1X_2>] = sum_j P_j(rho) P_j(O) / dim g_j (ideals = fermion
-    parity sectors, each ~ so(2^{n-1})) against deep random product circuits.
-    At exactly clustered inputs the output vanishes IDENTICALLY (every W, every
-    computational-basis input), since W^dag O W stays in the hollow algebra.
-
-CAVEAT (todos in research-floor-free-hardness.md): d_Z = 0 is verified up to
-n = 9 (doped chain) and n = 8 (graphs), not proven for all n; hardness of the doped gate set is conjectural. Exponential dimension and
-encoded universality of a related gate set do not establish hardness of this
-particular input/readout problem.
-"""
+Scan translation-invariant dopants of the XX/YY chain and XY interaction
+graphs. XIY and YIX dopants yield large algebras with zero Z-diagonal count
+in the tested sizes. Compare purity floors and sampled variance with
+statevector predictions, then write the hollow_dimension and hollow_sweep
+figures. The finite-size scans do not prove an all-qubit result."""
 
 from __future__ import annotations
 

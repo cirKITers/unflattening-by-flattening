@@ -1,100 +1,11 @@
-"""channel_scaling -- a barren plateau in the circuit is not one in the front end.
+"""Compare circuit and encoder variance channels near clustered inputs.
 
-The purity bound of eq:variance governs Var_W[<O>] for an *in-algebra* readout, and
-with it the gradient the circuit parameters see.  A classical map that produces the
-encoding angles is fed by a different quantity,
-
-    d<O>/dphi_k = (i/2) <psi(phi)| [Y_k, U^dag O U] |psi(phi)>          (R_y encoding)
-
-and Y_k is not in g for any of the families here (none contains a single-qubit term),
-so the commutator lies *outside* i g, where eq:variance does not apply.  The two
-channels are therefore not bound to each other, and this experiment measures how far
-apart they actually are.
-
-Write the input angles as phi = a + sigma xi with a in {0, pi}^n a computational-basis
-configuration.  Both channels vanish identically at sigma = 0 (eq:exact-zero for the
-circuit; for the encoder because every [Y_k, B] with B in the basis of i g is again
-non-diagonal, so its basis-state expectation is zero too).  They leave that point at
-different orders, which is the whole content of the finding:
-
-  * P_g and Var_W[<O>] need *two* sites displaced off the basis -- each term of
-    eq:offdiag-closedform carries sin^2 phi_j sin^2 phi_k -- hence sigma^4;
-  * the Y_k insertion in the commutator supplies one displacement for free, leaving
-    one site to be displaced, hence amplitude sigma and variance sigma^2.
-
-So the encoder channel is parametrically the *square root* of the circuit channel.
-That is a real separation and it is what lets a trainable front end escape a region
-where the circuit alone is stuck (exp_latent_drift), but it is not a free lunch:
-halving an exponent does not remove it.  Whether the separation survives growing n is
-the open question this experiment exists to answer, and it is why panel (b) sweeps n
-rather than reporting the n = 6 numbers alone.
-
-Method.  Random e^g circuits built directly from the Pauli generators (the 2-design
-setting eq:variance assumes), rather than a fixed hardware ansatz, so that all three
-families are treated identically -- the hollow doped family has no Model ansatz.
-Applying the same circuit to |psi> and to Y_k|psi> gives both channels from one draw:
-
-    <O>          = <chi|O|chi>,      d<O>/dphi_k = -Im <eta|O|chi>
-    chi = U|psi>,                    eta = U Y_k |psi>
-
-Families, all with the split-independent in-algebra readout O = X_1X_2 + Y_1Y_2
-(one basis string in each of the two ideals, cf. exp_hollow_doping):
-
-  * g_od   -- off-diagonal {XX, YY}, d_Z = 0, dim n(n-1); the floor-free witness.
-  * mg     -- matchgate, d_Z = n, dim n(2n-1); floored, so its purity never collapses.
-  * +XIY   -- g_od doped with X_k Y_{k+2}, d_Z = 0 but dim 4^{n-1} - 2^{n-1}; the
-              exponential floor-free family, where the suppression is exponential in n
-              rather than driven by sigma.
-
-k is taken at a readout site, which is the best case for the encoder channel and the
-one that governs an escape (a front end escapes through whichever site has the largest
-gradient); a site far from the readout would additionally decay through the lightcone
-and confound the n sweep.
-
-Outcome (300 circuits per point).  The sigma laws hold, and the encoder channel obeys
-the *same* law in every family regardless of its floor structure -- measured slopes
-d log Var / d log sigma at n = 6:
-
-    family   circuit   encoder
-    g_od       3.96      2.01
-    +XIY       3.55      1.91
-    mg        -0.00      1.80
-
-The matchgate row is the surprise, and it corrects the expectation this experiment was
-written with.  The floor protects the *circuit* channel completely (slope 0, the purity
-cannot fall below n-1), but it does not protect the encoder channel at all, which still
-decays as sigma^2.  The floored family therefore shows the *reverse* asymmetry: at
-clustered inputs its circuit trains happily while a classical front end is the part that
-freezes.  So the two channels are not merely separated on floor-free families, they are
-decoupled in general -- the floor structure governs one and says nothing about the other.
-Neither is a special case of the other; d_Z decides which of the two is the dead one.
-
-Suppression at sigma = 0.03, over n = 4..12 (4..8 for +XIY):
-
-    family   circuit          encoder
-    g_od     1.2e5 .. 7.8e5   2.5e1 .. 2.6e2
-    +XIY     3.9e4 .. 4.5e5   1.2e2 .. 4.0e2
-    mg       0.7 .. 0.87      1.6e2 .. 4.3e2
-
-Both separations are flat in n: they neither close nor widen over the range, so this is
-a parametric statement about sigma that holds uniformly in n, not an asymptotic claim.
-
-SCOPE, and the most important limitation.  On the exponential family the separation is
-absent in the n direction: at *uniform* inputs both channels decay at the same rate,
-Var ~ 2^{-1.05 n} (circuit) and 2^{-1.06 n} (encoder) over n = 4..8.  The encoder channel
-is therefore not protected against the DLA-dimension barren plateau, only against the
-input-clustering one.  A classical front end can rescue a model whose gradients died
-because its inputs sit on the computational basis; it cannot rescue one whose gradients
-died because its algebra is exponentially large.
-
-Figure: channel_scaling -- (a) both channels vs sigma at fixed n with the sigma^4 and
-sigma^2 guides, (b) the clustered-input suppression of each channel vs n, against the
-square-root prediction.
-
-TODO: n <= 12 (8 for the exponential family), one readout, one encoding.  TODO: the
-sigma^2 and sigma^4 laws are read off numerically; a closed form for the encoder channel
-(a purity of rho against the coset Y_k g rather than against g) would prove them.
-"""
+Random Pauli-generator circuits test off-diagonal, matchgate, and XIY-doped
+families. Near computational-basis inputs, the off-diagonal circuit variance
+falls as sigma^4 while its encoder variance falls as sigma^2. Matchgate
+purity retains a floor, yet its encoder channel still weakens. The qubit
+sweep checks this separation at finite sizes; both channels of the
+exponential XIY family decay with qubit count."""
 
 from __future__ import annotations
 

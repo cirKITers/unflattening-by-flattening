@@ -1,15 +1,9 @@
-"""uniform_prior -- Lemmas 1 and 2 (deterministic bound + uniform-prior purity).
+"""Check uniform-prior matchgate purity and polar preconditioning.
 
-  (1) Mean: E_Theta[P_g] under the uniform prior matches n-1+2^{-n} (Lemma 2),
-      for n up to 18 -- the "cheap sanity check" the manuscript proposes.
-  (2) Deterministic range: every sampled (and adversarial) Theta obeys
-      n-1 <= P_g <= n (Lemma 1); empirical infimum ~ n-1 (theta_k=pi/2).
-  (3) Polar-encoding worked example: isotropic (random-rotation) preconditioning
-      turns anisotropic data into near-uniform polar angles -- the prior that
-      makes Lemma 2 / Prop. 2 apply.
-
-Figures: uniform_prior_mean, preconditioning_effect.
-"""
+Check the deterministic band n-1 <= P_g <= n and the uniform-prior mean
+n-1+2^-n. Then rotate anisotropic data once and measure the resulting
+polar-angle distribution. The outputs are uniform_prior_mean and
+preconditioning_effect."""
 
 from __future__ import annotations
 

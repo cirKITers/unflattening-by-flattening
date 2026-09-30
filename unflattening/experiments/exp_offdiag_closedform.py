@@ -1,23 +1,11 @@
-"""offdiag_closedform
+"""Validate off-diagonal g-purity and its dependence on the input prior.
 
-The off-diagonal DLA g = <{X_k X_{k+1}, Y_k Y_{k+1}}> ~= so(n) (+) so(n) has no
-single-qubit Z, hence no deterministic purity floor.  For an R_y product state the
-input g-purity has the closed form
+The XX/YY algebra lacks a Z-diagonal purity floor. Check its closed form
+against a Lie-closure basis: uniform angles retain purity growing with n,
+while angles near {0, pi} drive it toward zero. Compare the two-ideal
+variance factor 2 P_g/dim g with deep statevector circuits, and write the
+offdiag_purity and purity_regime_contrast figures."""
 
-    P_g(rho(Theta)) = sum_{j<k, k-j odd} sin^2 t_j sin^2 t_k prod_{j<l<k} cos^2 t_l ,
-
-i.e. the matchgate cross-sum (Prop. 1) restricted to opposite-parity endpoints, with
-the on-site sum cos^2 floor term removed.  Three checks:
-  * closed form == brute-force g_purity_from_basis over lie_closure_paulis(...)
-  * uniform prior keeps E[P_g] = Omega(n) (-> n/3) while a prior clustered near {0,pi}
-    drives P_g -> 0 as the clustering width vanishes
-  * the two-ideal readout factor Var_theta = 2 P_g/dim g (main.tex, purity-normalization appendix) against deep
-    random e^{g_od} statevector circuits at n = 6 (part_variance).
-
-Figures: offdiag_purity (mean P_g vs n, uniform vs clustered, with the closed-form
-mean overlaid and brute-force-basis markers) and purity_regime_contrast (matchgate
-floor band vs off-diagonal collapse as the angles cluster).
-"""
 from __future__ import annotations
 
 import numpy as np
@@ -72,10 +60,10 @@ def diagonal_count(basis, axis: str = "Z") -> int:
 
 
 def part_criterion(n_max: int = N_VALID) -> None:
-    """Covariant floor criterion P_g(clustered) = d_A(g), for the clustering observable A.
-    A=Z (R_y, |0...0>): off-diag d_Z=0 (floor-free), matchgate d_Z=n.
-    A=X (phase enc, |+...+>): off-diag d_X=n-1 (FLOORED) -- floor-freeness is a joint property
-    of the encoding and the algebra, not the algebra alone."""
+    """Check that clustered-state purity equals the A-diagonal basis count.
+
+    Test both Z and X clustering to expose the encoding dependence of the floor.
+    """
     ok = True
     for n in range(2, n_max + 1):
         offdiag, mg = lie_closure_paulis(xx_yy_generators(n)), matchgate_basis(n)
@@ -173,9 +161,7 @@ def part_regime(rng: np.random.Generator, n: int = N_REGIME,
 
 def part_variance(rng: np.random.Generator, n: int = N_VARIANCE, M: int = M_VARIANCE,
                   depth: int = DEPTH_VARIANCE) -> None:
-    """Statevector check of the two-ideal readout factor (main.tex, purity-normalization appendix): deep random
-    e^{g_od} circuits with the in-algebra readout O = X_i X_{i+1} + Y_i Y_{i+1}
-    give Var_theta = 2 P_g/dim g, i.e. ~2x the naive single-ideal P_g/dim g."""
+    """Test Var[<XX+YY>] = 2 P_g/dim g with deep random statevector circuits."""
     from unflattening.utils.dla import pauli_to_bitmasks, word_matrix, random_dla_variance
 
     i = n // 2 - 1  # bulk bond (i, i+1), as in exp_reuploading/exp_precondition

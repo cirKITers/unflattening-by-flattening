@@ -1,24 +1,10 @@
-"""doping -- magic / non-Gaussian doping: trading trainability for hardness.
+"""Measure output variance as RZZ gates dope a matchgate circuit.
 
-Dopes the matchgate LASA with ``t`` two-qubit RZZ gates (generator Z_a Z_b is
-quartic in Majoranas, hence non-Gaussian / outside g = so(2n); the canonical
-non-matchgate insertion).  We measure how the loss variance Var_W[<Z_i>] decays
-in n as the doping budget t grows, and how the doped DLA dimension explodes.
-
-Mechanism shown (not the asymptotic threshold -- see caveat):
-  * t = 0 reproduces Theorem 1: Var_W = P_g/dim g = Theta(1/n) (log-log slope ~ -1);
-  * each non-Gaussian gate steepens the decay (the gradient-variance cost of
-    escaping Gaussianity), interpolating matchgate Omega(1/n) -> barren e^{-Theta(n)};
-  * one RZZ already blows the Lie closure from n(2n-1) to exp-size.
-
-The classical simulation cost grows as poly(n, 2^t), efficient only for t = O(log n)
-(literature), so this variance decay is the trainability price of escaping Gaussianity.
-
-CAVEAT: exact statevector caps n <~ 12, so this probes the *mechanism* (monotone
-steepening + DLA blow-up), not an n -> infinity threshold.
-
-Figures: doping_variance (left: Var vs n per t; right: fixed-n decay Var ~ c^{-t}).
-"""
+Insert t parameterized ZZ rotations at fixed positions in matchgate
+brickwork. Sweep qubit count and t, compare sampled variance with the t=0
+purity prediction, and measure Lie-algebra growth. The doping_variance
+figure shows both qubit scaling and fixed-qubit decay. Finite statevectors
+do not establish an asymptotic threshold."""
 
 from __future__ import annotations
 

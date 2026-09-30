@@ -1,29 +1,10 @@
-"""encoding_weights -- scalar-input weight hierarchies (Hamming / binary / ternary).
+"""Compare off-diagonal purity for Hamming, binary, and ternary encodings.
 
-For a scalar input x encoded as theta_k = w_k x, the model's frequency spectrum is
-Omega = {sum_k s_k w_k, s_k in {-1,0,1}}: Hamming (w_k = 1) gives |Omega| = 2n+1,
-binary (w_k = 2^{k-1}) gives 2^{n+1}-1 and ternary (w_k = 3^{k-1}) gives 3^n
-(exponential encodings, cf. Shin et al.).  The input purity connects to this
-hierarchy through the weights' arithmetic:
+Encode one scalar x as per-qubit angles w_k x. Binary and ternary weights
+recover the independent uniform-prior mean for uniform x; Hamming weights
+follow a different exact mean. Validate those formulas and model statevectors,
+then write encoding_landscape and encoding_mean for plotting."""
 
-  * P_g(rho(w x)) is a trigonometric polynomial in x with max frequency
-    2 sum_k w_k, i.e. the purity landscape inherits the model's spectrum.
-  * the purity depends on the angle law only through moments E[prod cos(2 theta_k)];
-    for DISSOCIATED weights (binary/ternary: no +-1 combination sums to zero) all
-    these moments vanish under uniform x, so E_x[P_g] equals the iid uniform-prior
-    mean EXACTLY -- a single uniform feature spectrally preconditions the encoding.
-  * Hamming weights are not dissociated; uniform x gives the steeper mean
-    E_x[P_god] = sum_{d odd} (n-d) [a_{d-1} - 2 a_d + a_{d+1}],  a_j = C(2j,j)/4^j,
-    with slope ~0.409 n vs the iid n/3, but a strongly fluctuating landscape.
-  * clustered x near {0, pi} collapses every integer-weight encoding (theta_k lands
-    in {0, pi}); exponential weights however AMPLIFY any spread in x by w_k, so a
-    small jitter already re-uniformises the high-weight qubits (partial recovery),
-    while new exact zeros appear at benign-looking inputs (x = pi/2 under binary,
-    x = pi/3 under ternary: all but one qubit clusters).
-
-Figures: encoding_landscape (purity landscape P_god(x) at n=6) and
-encoding_mean (E_x[P_god] vs n under uniform and clustered x).
-"""
 from __future__ import annotations
 
 from math import comb
@@ -31,7 +12,6 @@ from math import comb
 import numpy as np
 
 from unflattening import figures
-from unflattening.utils.plotting import TEAL, ORANGE, ACCENT
 from unflattening.utils.purity import offdiag_closed_form, offdiag_uniform_mean
 
 from qml_essentials.ansaetze import Encoding
@@ -44,18 +24,11 @@ RAW_EPS = 0.03     # jitter of the clustered scalar input around {0, pi}
 SEED = 13
 TOL = 1e-9
 
-# hamming=orange (the reserved BAD / collapsing path), binary=green (teal, good path),
-# ternary=blue (accent).  Weights and spectrum sizes come from the qml-essentials Encoding
-# strategies: get_weights(n) -> hamming w_k=1, binary w_k=2^k, ternary w_k=3^k (phi_k = w_k x).
+# Weights and spectrum sizes come from the qml-essentials Encoding strategies.
 ENCODINGS = {
-    "hamming": (ORANGE, Encoding("hamming", ["RY"])),
-    "binary": (TEAL, Encoding("binary", ["RY"])),
-    "ternary": (ACCENT, Encoding("ternary", ["RY"])),
-}
-_LSTYLE = {  # ternary spans 3^n freqs: thin/faint/behind, hamming on top
-    "hamming": dict(alpha=0.9, lw=0.9, zorder=3),
-    "binary": dict(alpha=0.8, lw=0.8, zorder=2),
-    "ternary": dict(alpha=0.45, lw=0.4, zorder=1),
+    "hamming": Encoding("hamming", ["RY"]),
+    "binary": Encoding("binary", ["RY"]),
+    "ternary": Encoding("ternary", ["RY"]),
 }
 
 
@@ -82,12 +55,7 @@ def exact_grid_mean(w: np.ndarray) -> float:
 
 
 def part_crosscheck(n_qubits: int = N_QUBITS, seed: int = SEED) -> None:
-    """Double-check: the qml-essentials Fourier model reproduces the figure's encoding path.
-
-    A Model with No_Ansatz, R_y gates and strategy ``kind`` prepares the state
-    prod_k R_y(w_k x)|0>, so its off-diagonal g-purity must match
-    offdiag_closed_form(w x) (to float32 precision, jax's default dtype).
-    """
+    """Compare model statevector purity with the weighted-angle closed form."""
     from qml_essentials.model import Model
     from unflattening.utils.dla import lie_closure_paulis, xx_yy_generators
     from unflattening.utils.purity import g_purity_from_basis
@@ -95,7 +63,7 @@ def part_crosscheck(n_qubits: int = N_QUBITS, seed: int = SEED) -> None:
     n = n_qubits
     basis = lie_closure_paulis(xx_yy_generators(n))
     xs = np.random.default_rng(seed).uniform(0, 2 * np.pi, size=64)  # own rng: no draw-order shift
-    for kind, (_, enc) in ENCODINGS.items():
+    for kind, enc in ENCODINGS.items():
         w = weights(enc, n)
         model = Model(n_qubits=n, n_layers=1, circuit_type="No_Ansatz",
                       encoding=enc, remove_zero_encoding=False)
@@ -108,9 +76,8 @@ def part_crosscheck(n_qubits: int = N_QUBITS, seed: int = SEED) -> None:
 
 
 def part_validate(ns=VALIDATE_RANGE, n_qubits: int = N_QUBITS, tol: float = TOL) -> None:
-    """Dissociated (binary/ternary) weights reproduce the iid uniform-prior mean exactly;
-    Hamming follows its own second-difference formula; benign inputs give new exact zeros."""
-    hamming, binary, ternary = (ENCODINGS[k][1] for k in ("hamming", "binary", "ternary"))
+    """Check exact uniform means and binary/ternary zero-purity inputs."""
+    hamming, binary, ternary = (ENCODINGS[k] for k in ("hamming", "binary", "ternary"))
     for n in ns:
         iid = offdiag_uniform_mean(n)
         assert abs(exact_grid_mean(weights(binary, n)) - iid) < tol, "binary must equal iid mean"
@@ -122,11 +89,10 @@ def part_validate(ns=VALIDATE_RANGE, n_qubits: int = N_QUBITS, tol: float = TOL)
 
 
 def part_landscape(n_qubits: int = N_QUBITS) -> None:
-    """Purity landscape P_god(x) at fixed n (equal, binary, ternary).  Ternary spans 3^n
-    frequencies and renders as a dense band drawn behind the others."""
+    """Write scalar-input purity landscapes for all three weight schemes."""
     land = {}
     for kind in ("hamming", "binary", "ternary"):
-        color, enc = ENCODINGS[kind]
+        enc = ENCODINGS[kind]
         w = weights(enc, n_qubits)
         m = int(2 ** np.ceil(np.log2(32 * w.sum() + 16)))
         x = np.arange(m) * 2 * np.pi / m
@@ -148,7 +114,7 @@ def part_mean(rng, ns=RANGE_QUBITS, n_samples: int = N_SAMPLES, raw_eps: float =
     for i, n in enumerate(ns):
         xu = rng.uniform(0, 2 * np.pi, size=n_samples)
         xc = rng.integers(0, 2, size=n_samples) * np.pi + rng.normal(0.0, raw_eps, size=n_samples)
-        for kind, (color, enc) in ENCODINGS.items():
+        for kind, enc in ENCODINGS.items():
             w = weights(enc, n)
             mean_u[kind][i] = float(offdiag_closed_form(xu[:, None] * w[None, :]).mean())
             mean_c[kind][i] = float(offdiag_closed_form(xc[:, None] * w[None, :]).mean())
@@ -164,7 +130,7 @@ def part_mean(rng, ns=RANGE_QUBITS, n_samples: int = N_SAMPLES, raw_eps: float =
 
     # cheap cross-check of the |Omega| closed forms the figure's right axis draws
     # (get_n_freqs would enumerate a 3^n set at n=14, hence the closed forms there).
-    for kind, (_, enc) in ENCODINGS.items():
+    for kind, enc in ENCODINGS.items():
         want = {"hamming": 2 * 6 + 1, "binary": 2 ** 7 - 1, "ternary": 3 ** 6}[kind]
         assert enc.get_n_freqs(np.ones(6, dtype=bool)) == want, f"{kind}: |Omega| closed form vs get_n_freqs"
 
@@ -172,7 +138,7 @@ def part_mean(rng, ns=RANGE_QUBITS, n_samples: int = N_SAMPLES, raw_eps: float =
                       **{f"u_{k}": mean_u[k] for k in ENCODINGS},
                       **{f"c_{k}": mean_c[k] for k in ENCODINGS}))
     figures.fig_encoding_mean()
-    for kind, (_, enc) in ENCODINGS.items():
+    for kind, enc in ENCODINGS.items():
         # get_n_freqs takes the (n_qubits,) reupload mask: one fully-reuploaded layer
         mask = np.ones(ns[-1], dtype=bool)
         print(f"{kind:8s} n={ns[-1]}: uniform {mean_u[kind][-1]:.3f}  "

@@ -1,18 +1,11 @@
-"""Finite-depth output-variance comparison under data re-uploading.
+"""Compare output variance across data re-uploading depths.
 
-The qml_essentials.Model convention is ansatz-first, with L encoding blocks
-and L+1 trainable blocks. Product-input purity formulas do not directly apply
-to the intermediate, generally entangled states.
+The Model circuit has L encodings and L+1 trainable blocks. Compare
+off-diagonal XX/YY and matchgate readouts under uniform and clustered
+angles, and check the exact zero of the off-diagonal output at basis-state
+angles. The reuploading_depth figure shows finite-depth sampled variance;
+product-input purity formulas do not apply to intermediate states."""
 
-Exactly computational-basis angles make each encoder a Pauli string, so the
-floor-free output is zero regardless of block ordering. This is checked here
-at L=1 and L=8. Nonzero-width and uniform-prior behavior is empirical over the
-measured depth range. The matchgate priors both retain a nonzero signal but
-need not give equal variances. No equivalence between block orderings is claimed
-away from exact clustering.
-
-Figure: reuploading_depth (sampled output variance vs encoding depth).
-"""
 from __future__ import annotations
 
 import numpy as np
@@ -33,19 +26,16 @@ SEED = 11
 
 
 def _reupload_mask(depth: int, n_qubits: int = N_QUBITS) -> np.ndarray:
-    """Per-layer diagonal data-reupload mask (qubit q reads input feature q), so the
-    encoding S(Theta) = prod_q R_y(theta_q) has per-qubit distinct angles."""
+    """Return the diagonal feature-to-qubit mask for each encoding layer."""
     return np.broadcast_to(np.eye(n_qubits, dtype=bool), (depth, n_qubits, n_qubits)).copy()
 
 
 def var_vs_depth(circuit_type: str, thetas: np.ndarray, obs, key,
                  n_qubits: int = N_QUBITS, depths=DEPTHS,
                  n_samples: int = N_SAMPLES) -> np.ndarray:
-    """Var_W[<O>] for each theta row and depth in ``depths``, via qml_essentials.Model.
+    """Return sampled output variance for each depth and angle row.
 
-    ``Model`` builds the ansatz-first re-uploading circuit with ``n_layers=depth``
-    (data_reupload -> depth+1 ansatz layers); ``obs`` is summed to the scalar output
-    <sum_i O_i>.  Returns ``(len(depths), len(thetas))``.
+    The result has shape ``(len(depths), len(thetas))``.
     """
     out = np.zeros((len(depths), thetas.shape[0]))
     for di, depth in enumerate(depths):

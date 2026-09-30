@@ -1,21 +1,9 @@
-"""input_purity -- the conditional thesis on the *input* axis: a polynomial DLA
-is not sufficient when the input g-purity is small.
+"""Compare product and Haar inputs at fixed matchgate algebra and Z readout.
 
-Same matchgate LASA (polynomial DLA so(2n), dim g = n(2n-1)) and the same readout
-Z_i throughout; only the *input state* is swapped:
-  * structured product state rho(Theta)  -> P_g >= n-1,  Var_W = Theta(1/n)   (BP-free);
-  * Haar-random input |psi>              -> E[P_g] = n(2n-1)/(2^n+1),  Var_W = Theta(2^-n).
-
-With the denominator dim g fixed and polynomial in both cases, the input g-purity
-numerator of Eq. (ragone) alone decides trainability.  This is the input-side
-companion of exp_bp_contrast, which instead varies dim g.
-
-E[P_g] = n(2n-1)/(2^n+1) is the 2-design average E[<psi|B|psi>^2] = 1/(2^n+1)
-over the n(2n-1) matchgate basis elements; with the in-algebra readout P_g(Z_i)=1
-this gives E[Var_W] = 1/(2^n+1).
-
-Figures: input_purity_scaling (single panel: Var_W vs n, product vs Haar input).
-"""
+The product state's purity has a linear lower bound, while mean Haar purity
+falls relative to the algebra dimension and predicts variance 1/(2^n+1).
+Sample output variance across qubit counts to isolate the input effect, then
+write data for the input_purity_scaling figure."""
 
 from __future__ import annotations
 

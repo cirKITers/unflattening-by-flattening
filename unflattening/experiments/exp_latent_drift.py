@@ -1,97 +1,11 @@
-"""latent_drift -- where does the *latent* angle distribution go during training?
+"""Track latent angles during joint classical and quantum training.
 
-A trainable classical map now sits in front of the quantum Fourier model of
-exp_precondition_training: x -> phi = x + g(x) -> R_y(phi) -> re-uploaded ansatz ->
-<O>.  The classical map is a per-site *elementwise* residual MLP (one scalar
-1 -> 16 -> 1 network per feature, tanh hidden, zero-initialised output layer, so
-phi = x exactly at epoch 0).  Elementwise by construction: it can reshape every
-angle marginal arbitrarily but cannot mix features, so the order-2 cross terms of
-the Fourier target must still be produced by the quantum head.  The latent law is
-therefore an instrument, not a shortcut to the regression.
-
-The question (memo research-latent-uniformization.md): the *original* hypothesis was
-that such a latent law drifts toward uniform, because uniform angles maximise the
-input g-purity that sets the gradient variance.  That premise is false -- the global
-maximum of the off-diagonal purity is P_g = n-1, attained at phi = pi/2 (X
-eigenstates, apx:purity), roughly three times the uniform-prior mean mu_n = n/3-5/9.
-So a purity-seeking drift would cluster the latents at pi/2, not uniformise them.
-What survives is a *selection* statement, tested here as four predictions:
-
-  1. frozen arm: a run whose latents start clustered near {0, pi} stays frozen.  The
-     gradient reaching the classical net factors through dL/dphi, which is exactly
-     zero at sigma = 0 (eq:exact-zero) and exponentially small nearby, so the MLP
-     cannot rescue itself -- a one-way boundary, not an attractor.
-  2. selection: descending runs keep the dataset-averaged purity P^ (eq:uniformity-test)
-     bounded away from zero throughout, but settle at a task-dependent equilibrium
-     generically *below* the attainable maximum n-1.
-  3. discriminator: the per-site angle histograms separate the end states -- flat
-     (uniform), peaked at pi/2 (the X-floor), or task-structured clusters.
-  4. control: the floored matchgate head (d_Z = n, purity pinned to [n-1, n] by
-     eq:productform) drifts under task pressure with no purity headroom at all.
-
-Falsification: the original hypothesis predicts P^ -> mu_n with flat marginals in
-every descending run.  The refined form predicts a frozen arm, a plateau away from
-both 0 and n-1, and non-uniform end-state histograms.
-
-Outcome (n = 6, 8 seeds, 500 epochs).  Prediction 1 is *refuted*: the raw arm is not
-frozen, it is rescued.  Its latent purity climbs from 7.0e-6 to 0.89 (1.3e5x) inside
-the first five epochs and its loss falls to 0.057 L_0, where the same data, target and
-W0 without the MLP stall above 0.85 L_0 (fig:precondition_training).  The reason,
-quantified in exp_channel_scaling, is that the purity bound constrains the *circuit*
-channel and not the *encoder* channel: writing the inputs as phi = a + sigma xi with a
-on the computational basis, Var_W[<O>] tracks the purity at sigma^4 while
-Var_W[d<O>/dphi] recovers at sigma^2, so the encoder channel is the square root of the
-circuit channel.  The exact-zero identity kills the diagonal matrix element
-<a|U^dag O U|a> for every W, and with it the derivative in W, while the derivative in
-phi is an off-diagonal element that it does not constrain.  A barren plateau in the
-circuit parameters therefore need not be one in the parameters of a classical front
-end, and Adam's per-parameter normalisation turns the surviving small gradient into an
-escape within a handful of epochs.
-
-Predictions 2-4 hold.  No arm converges to uniform and none approaches the maximum:
-the uniform arm ends at P^ = 1.68 against mu_n = 1.45 and the attainable n-1 = 5, and
-the rescued raw arm stops at 0.89, short even of mu_n.  Measuring the end states by
-per-site total variation to the uniform law (sampling floor 0.17, since the seeds share
-one dataset), over epochs 0 -> 500: the uniform arm goes 0.172 -> 0.137, i.e. it starts
-uniform and never leaves; the raw arm goes 0.917 -> 0.608, i.e. it moves toward uniform
-and stops a long way short.  Neither ends uniform nor peaked at pi/2.  Note that the
-*pooled* histogram is misleading here -- averaging six sites whose peaks sit at
-different angles flattens them into something that looks uniform, which is why the
-per-site curves and this statistic are the discriminator, not the pooled line.
-
-The floored matchgate control is the cleanest confirmation of the mechanism.  Its
-purity has no room to move (eq:productform pins it to [n-1, n]) and it does not move:
-the uniform arm sits at 5.018 for all 500 epochs, unchanged to three decimals, and the
-clustered arm slides 5.995 -> 5.391, i.e. *down* from the ceiling toward the floor --
-task-driven latent motion that buys no purity at all.  At clustered inputs its front
-end is also the most static of the four (mean |phi-x| = 0.39 against 0.66 for the
-off-diagonal arm on the identical dataset, and per-site TV 0.713 against 0.608), while
-its loss still descends: exactly the reversed asymmetry exp_channel_scaling predicts,
-where the floor protects the circuit channel and leaves the encoder channel to die.
-
-CAVEAT, and it is easy to get wrong: L/L_0 is *not* comparable across arms.  The raw
-inputs sit near {0,pi}^n, so they collapse to 63 distinct bit patterns over the 256
-samples and the target collapses with them -- a cluster-mean lookup explains 99.84 % of
-Var[y_raw], and those means are fit by a 22-coefficient degree-2 polynomial in the six
-bits to R^2 = 0.9995.  The raw arms therefore solve a far easier regression than the
-uniform arms, and their lower relative loss says nothing about the input law being
-better.  The valid comparison is within an arm: same data, same target, same W0, with
-the MLP versus without.
-
-TODO: the escape is measured under Adam, whose normalisation is what converts a small
-encoder gradient into a finite step; plain SGD may still be trapped, which would make
-the boundary optimiser-dependent rather than absent.  TODO: single target and single n.
-
-Setup is that of fig:precondition_training -- n = 6, depth 10, the same Fourier target,
-the same 256-sample datasets (identical RNG stream), the same Adam at lr 0.05 over 8
-seeds, and for the off-diagonal head the same W0 -- so the quantum-only curves of that
-figure are the no-MLP baseline of this one.  The MLP and the circuit train jointly
-under one optimiser.
-
-Figures: latent_drift (loss, gradient variance split by parameter group, and P^ vs
-epoch, on a log epoch axis since nearly all the motion is over by epoch ~20),
-latent_drift_hist (per-site latent histograms at four training snapshots).
-"""
+A per-site residual MLP starts as the identity map before a re-uploading
+quantum head. Across paired seeds, compare uniform and clustered inputs with
+off-diagonal and matchgate heads. Record loss, parameter-group gradient
+dispersion, latent purity, and per-site angle histograms. The clustered
+off-diagonal arm recovers under Adam. Compare loss within an arm only:
+clustered and uniform datasets have different task difficulty."""
 
 from __future__ import annotations
 

@@ -1,18 +1,11 @@
-"""Training comparison between uniform and clustered angle priors.
+"""Train the same Fourier target under uniform and clustered input laws.
 
-The priors supply separate datasets labeled by the same Fourier target function.
-Initial parameters are paired across priors. No rotation is applied to a shared
-labeled dataset. The ansatz-first circuit has 10 R_y encoding blocks and 11
-trainable XX/YY blocks, with an in-algebra XX+YY readout.
-
-The product-state purity is a reference diagnostic, not the actual state purity
-at the first trainable block of this circuit. Saved gradvar fields measure
-coordinate-wise gradient dispersion at one iterate, not ensemble gradient
-variance. Legacy pre/raw names mean uniform/clustered and are kept for CSV
-compatibility. These finite-size results do not establish BP scaling.
-
-Figure: precondition_training (relative loss and gradient dispersion vs epoch).
-"""
+Train an XX/YY re-uploading model on separate datasets labeled by the same
+Fourier target, pairing initial parameters across input laws. Plot relative
+loss and gradient dispersion over epochs. Product-state purity is a
+reference diagnostic; saved gradvar values are coordinate-wise dispersion
+at each iterate. These finite-size curves do not establish barren-plateau
+scaling."""
 
 from __future__ import annotations
 

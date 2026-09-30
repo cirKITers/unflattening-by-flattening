@@ -1,17 +1,9 @@
-"""theorem1 -- Theorem 1 (the angle-encoded matchgate pipeline is BP-free).
+"""Test matchgate output-variance convergence and qubit-count scaling.
 
-Builds the pipeline |psi(Theta)> -> U(W) -> <Z_i> with a matchgate LASA U(W)
-(RZ + nearest-neighbour RXX brickwork) in JAQSI, samples W ~ U[0,2pi), and
-estimates the loss variance Var_W[<Z_i>].
-
-  Panel 1 (convergence): at fixed n, Var_W converges to the analytic value
-      P_g(rho(Theta))/dim g as the brickwork depth grows (the 2-design
-      hypothesis of Theorem 1 kicking in).
-  Panel 2 (scaling): across n, Var_W tracks P_g/dim g = Theta(1/n) (slope -1 on
-      log-log), inside the proven range [(n-1)/(n(2n-1)), 1/(2n-1)].
-
-Figures: matchgate_convergence, matchgate_scaling.
-"""
+Sample random matchgate parameters for RY product inputs. At fixed qubit
+count, test convergence toward Var_W[<Z_i>] = P_g/dim g as depth grows.
+Across qubit counts, test the predicted 1/n scaling. The two sweeps produce
+matchgate_convergence and matchgate_scaling."""
 
 from __future__ import annotations
 

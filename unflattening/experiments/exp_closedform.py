@@ -1,18 +1,9 @@
-"""closedform -- Proposition 1 (closed form for the g-purity).
+"""Validate the matchgate g-purity closed form against its Lie-closure basis.
 
-Validates, for n = 2..8 and random angle configurations:
-  (1) the matchgate Pauli-string basis Eq. (strings) has dim n(2n-1) and equals
-      the Lie closure of the generators {Z_k} u {X_k X_{k+1}};
-  (2) the closed form Eq. (closedform) equals the direct sum of squared Pauli
-      expectations Eq. (gpurity-pauli) over that basis (Prop. 1) to ~1e-12;
-  (3) the single-term form (n-1) + prod_k cos^2(theta_k) Eq. (productform) equals
-      that basis sum (the telescoping collapse of Prop. 1);
-  (4) JAQSI's statevector of the R_y product encoding reproduces product_state()
-      and the single-site moments <Z_k> = cos theta_k.
-
-Extends the n<=5 symbolic/numerical check reported in the manuscript appendix.
-Writes data/closedform.csv.  No figure.
-"""
+For n=2..8, compare the closed form and its telescoping product form with
+the squared Pauli expectations over the matchgate basis. Also check the
+product-state implementation against JAQSI statevectors. Write numerical
+errors and basis dimensions to data/closedform.csv; there is no figure."""
 
 from __future__ import annotations
 

@@ -1,19 +1,9 @@
-"""acceptance_rate -- empirical acceptance rate of the fixed-Q certification test.
+"""Estimate acceptance of the fixed-Q input-purity test.
 
-The manuscript draws one rotation Q ~ Haar(SO(D)), holds it fixed across the
-dataset and accepts it if the dataset-averaged off-diagonal purity reaches half
-the iid-uniform mean,
-
-    hat(P) = (1/m) sum_i P_god(rho(phi(Q x_i)))  >=  mu_n / 2 .
-
-Markov's inequality on n - E_x[P_god] only guarantees this event with
-probability >= (mu_n/2)/(n - mu_n/2) -> 1/5.  That bound is loose because it
-uses just the mean; here we measure the actual rate over many Haar draws of Q
-on the same anisotropic (correlation 0.97) raw data as fig:polar, so the paper
-can state the rejection-sampling overhead instead of only the worst case.
-
-No figure: the deliverable is the acceptance rate quoted in the appendix.
-"""
+For each qubit count, hold an anisotropic dataset fixed and sample Haar
+rotations Q. Accept a rotation when its dataset-averaged off-diagonal purity
+reaches half the uniform-prior mean. Compare the observed rate with the
+Markov bound in data/acceptance_rate.csv; this experiment has no figure."""
 
 from __future__ import annotations
 
