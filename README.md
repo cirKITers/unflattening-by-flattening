@@ -27,7 +27,7 @@ Experiment parameters, including random seeds, sample counts, qubit ranges, and 
 The command-line interface uses these defaults; there is no separate configuration file or external dataset.
 Results are stochastic, so small numerical differences across machines or JAX backends are possible.
 
-Experiments write numeric CSV files to `data/` and render PGF figures with PNG previews in `figures/`. 
+Experiments write numeric CSV files to `data/` and render PGF figures with PNG previews in `figures/`.
 To redraw every figure from existing CSV files without rerunning the experiments, use:
 
 ```bash
