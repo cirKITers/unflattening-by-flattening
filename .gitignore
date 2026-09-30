@@ -1,7 +1,7 @@
 *.md
 !README.md
 
-data
+data/*
 figures
 
 ### Python ###
