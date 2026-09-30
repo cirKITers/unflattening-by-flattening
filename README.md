@@ -1,6 +1,7 @@
-# Numerical experiments for *Unflattening by flattening*
+# Unflattening by Flattening - Numerical Experiments
 
-This repository contains the numerical experiments and figure generator for the paper. The experiments study how input distributions and circuit algebras affect the trainability of quantum machine learning circuits.
+This repository contains the numerical experiments and figure generator for [Unflattening by Flattening -- How Input Distributions Shape Output Variance in Angle-Encoded Circuits](). 
+Our paper studies how input distributions and circuit algebras affect the trainability of quantum machine learning circuits.
 
 ## Getting Started
 
