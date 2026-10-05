@@ -4,7 +4,7 @@ authors:
   - family-names: "Strobl"
     given-names: "Melvin"
     orcid: "https://orcid.org/0000-0003-0229-9897"
-title: "Unflattening by Flattening"
+title: "Reproduction Package for 'Unflattening by Flattening -- How Input Distributions Shape Output Variance in Angle-Encoded Circuits'"
 version: 1.0.0
 date-released: 2026-10-03
 repository-code: "https://github.com/cirKITers/unflattening-by-flattening"
