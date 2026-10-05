@@ -11,10 +11,8 @@ dependencies = [
     "optax",
     "scipy",
     "qml-essentials",
+    "fluksio>=0.1.6",
 ]
-
-[project.scripts]
-unflatten = "unflattening.cli:main"
 
 [build-system]
 requires = ["hatchling"]

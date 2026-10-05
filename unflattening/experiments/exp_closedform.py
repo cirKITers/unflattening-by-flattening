@@ -3,7 +3,7 @@
 For n=2..8, compare the closed form and its telescoping product form with
 the squared Pauli expectations over the matchgate basis. Also check the
 product-state implementation against JAQSI statevectors. Write numerical
-errors and basis dimensions to data/closedform.csv; there is no figure."""
+errors and basis dimensions to closedform.csv; there is no figure."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from qml_essentials.gates import Gates
 
 from unflattening.utils import dla
 from unflattening.utils.purity import product_state, g_purity_closed_form, g_purity_from_basis
-from unflattening.utils.plotting import DATA_DIR
+from unflattening.utils import plotting
 
 N_MAX = 8
 N_RANDOM = 50
@@ -84,11 +84,12 @@ def part_validate(rng, n_max=N_MAX, n_random=N_RANDOM, tol=TOL) -> bool:
             )
         )
 
-    out = DATA_DIR / "closedform.csv"
+    out = plotting.DATA_DIR / "closedform.csv"
     with open(out, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         w.writeheader()
         w.writerows(rows)
+    plotting.WRITTEN.append(out)
     print(f"\nwrote {out}")
     return ok
 
@@ -96,7 +97,3 @@ def part_validate(rng, n_max=N_MAX, n_random=N_RANDOM, tol=TOL) -> bool:
 def main() -> None:
     ok = part_validate(np.random.default_rng(0))
     print("closedform:", "PASS" if ok else "FAIL")
-
-
-if __name__ == "__main__":
-    main()

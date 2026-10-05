@@ -1,4 +1,4 @@
-"""Shared figure style and PGF/PNG export to the repository's figures/ directory."""
+"""Shared figure style and PGF/PNG export to a study's dev/<study>/figures/ directory."""
 
 from __future__ import annotations
 
@@ -12,10 +12,21 @@ from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 from matplotlib.ticker import LogLocator  # noqa: E402
 
 _CODE_DIR = Path(__file__).resolve().parents[2]
-FIG_DIR = _CODE_DIR / "figures"
-DATA_DIR = _CODE_DIR / "data"
-FIG_DIR.mkdir(exist_ok=True)
-DATA_DIR.mkdir(exist_ok=True)
+DEV_DIR = _CODE_DIR / "dev"
+# Set by set_study(): dev/<study>/figures and dev/<study>/data.
+FIG_DIR = DATA_DIR = None
+# Every file written since the last set_study(), for the run's artifacts.
+WRITTEN: list[Path] = []
+
+
+def set_study(study: str) -> None:
+    """Route figures and data to ``dev/<study>/`` and reset :data:`WRITTEN`."""
+    global FIG_DIR, DATA_DIR
+    FIG_DIR, DATA_DIR = DEV_DIR / study / "figures", DEV_DIR / study / "data"
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    WRITTEN.clear()
+
 
 # Manuscript palette: R ``COLOURS.LIST`` exact hexes (from the sibling
 # pulse-level paper's ``layout.r``), mapped onto the semantics fixed by Fig. 1
@@ -132,11 +143,13 @@ def top_legend(ax, handles=None, labels=None, ncol=None, **kw):
 
 
 def save(fig, name: str) -> None:
-    """Save ``fig`` as ``figures/<name>.pgf`` (+ a .png preview)."""
+    """Save ``fig`` as ``<FIG_DIR>/<name>.pgf`` (+ a .png preview)."""
     fig.savefig(FIG_DIR / f"{name}.png", dpi=150)
+    WRITTEN.append(FIG_DIR / f"{name}.png")
     try:
         fig.savefig(FIG_DIR / f"{name}.pgf", backend="pgf")
+        WRITTEN.append(FIG_DIR / f"{name}.pgf")
     except Exception as e:  # pragma: no cover - latex may be unavailable
         print(f"  [warn] PGF export of {name} failed ({e}); PNG written.")
     plt.close(fig)
-    print(f"  wrote figures/{name}.pgf (+ .png)")
+    print(f"  wrote {FIG_DIR.relative_to(_CODE_DIR)}/{name}.pgf (+ .png)")

@@ -151,7 +151,3 @@ def main() -> None:
     part_crosscheck()
     part_landscape()
     part_mean(rng)
-
-
-if __name__ == "__main__":
-    main()

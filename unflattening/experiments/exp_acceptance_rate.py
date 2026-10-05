@@ -74,7 +74,3 @@ def part_acceptance(rng, ns=N_RANGE, m=N_DATA, draws=N_DRAWS, rho=ANISO_RHO) -> 
 
 def main() -> None:
     part_acceptance(np.random.default_rng(11))
-
-
-if __name__ == "__main__":
-    main()

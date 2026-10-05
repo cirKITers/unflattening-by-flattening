@@ -338,7 +338,3 @@ def main() -> None:
     figures.fig_hollow_dimension()
     figures.fig_hollow_sweep()
     print("hollow_doping: done", flush=True)
-
-
-if __name__ == "__main__":
-    main()

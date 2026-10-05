@@ -59,7 +59,3 @@ def part_contrast(rng, key, ns=N_RANGE, n_samples=N_SAMPLES) -> None:
 def main() -> None:
     rng = np.random.default_rng(3)
     part_contrast(rng, jax.random.PRNGKey(11))
-
-
-if __name__ == "__main__":
-    main()

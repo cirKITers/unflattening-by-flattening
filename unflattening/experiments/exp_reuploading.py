@@ -115,7 +115,3 @@ def part_reuploading(rng, key, n_qubits=N_QUBITS, depths=DEPTHS, k_th=K_TH,
 
 def main() -> None:
     part_reuploading(np.random.default_rng(SEED), jax.random.PRNGKey(SEED))
-
-
-if __name__ == "__main__":
-    main()

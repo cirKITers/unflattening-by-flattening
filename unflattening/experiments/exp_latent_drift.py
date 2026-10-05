@@ -292,7 +292,3 @@ def main() -> None:
     print(f"latent_drift -- n={N_QUBITS}, depth={DEPTH}, {N_SEEDS} seeds, "
           f"MLP 1->{HIDDEN}->1 per site, mu_n={offdiag_uniform_mean(N_QUBITS):.3f}")
     part_figure(part_training(heads, X, y), X)
-
-
-if __name__ == "__main__":
-    main()

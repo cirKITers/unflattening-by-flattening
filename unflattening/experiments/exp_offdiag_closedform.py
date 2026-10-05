@@ -197,7 +197,3 @@ def main() -> None:
     print(f"  two-ideal variance factor vs statevector, g_od at n={N_VARIANCE}:")
     part_variance(np.random.default_rng(1))  # own rng: keeps the figure data unchanged
     print("offdiag_closedform: done")
-
-
-if __name__ == "__main__":
-    main()

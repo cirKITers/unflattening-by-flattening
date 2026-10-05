@@ -1,8 +1,11 @@
 *.md
 !README.md
 
-data/*
-figures
+# The engine's store, and each study's CSVs and figures. Reproducible from
+# `fluksio run`, and recorded as artifacts of each run.
+.fluksio/
+dev/*/data/
+dev/*/figures/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

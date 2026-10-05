@@ -240,7 +240,3 @@ def main() -> None:
     sig = part_sigma(rng)
     scal = part_scaling(rng)
     part_figure(sig, scal, rng)
-
-
-if __name__ == "__main__":
-    main()

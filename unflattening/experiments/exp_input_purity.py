@@ -87,7 +87,3 @@ def part_input_purity(rng, key, ns=N_RANGE, n_samples=N_SAMPLES, n_inputs=N_INPU
 def main() -> None:
     rng = np.random.default_rng(5)
     part_input_purity(rng, jax.random.PRNGKey(7))
-
-
-if __name__ == "__main__":
-    main()

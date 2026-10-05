@@ -211,7 +211,3 @@ def main() -> None:
 
     stacks = part_training(model, predict, th_pre_j, y_pre, th_raw_j, y_raw)
     part_figure(stacks, diagnostics, (y_pre, y_raw), len(basis))
-
-
-if __name__ == "__main__":
-    main()

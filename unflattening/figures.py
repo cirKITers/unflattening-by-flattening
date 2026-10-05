@@ -1,7 +1,7 @@
 """Render the experiment CSV files as PGF figures and PNG previews.
 
-Experiments write numeric results to data/. Run this module to redraw figures
-from those CSV files without rerunning the experiments. CSV columns may contain
+Experiments write numeric results to dev/<study>/data/. Run this module to
+redraw figures from those CSV files without rerunning the experiments. CSV columns may contain
 repeated scalars or trailing empty cells for shorter series."""
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import numpy as np
 from matplotlib.ticker import LogFormatterSciNotation, LogLocator
 
 from unflattening.utils import plotting
-from unflattening.utils.plotting import (plt, DATA_DIR, GREY_FILL, GREY_REF,
+from unflattening.utils.plotting import (plt, GREY_FILL, GREY_REF,
                                          TEAL, ORANGE, ACCENT, NAVY)
 
 # Figure-only styling for the encoding landscapes and means.
@@ -40,7 +40,7 @@ def _fmt(v) -> str:
 
 
 def write_csv(stem: str, cols: dict) -> None:
-    """Write columns to data/, repeating scalars and padding short columns."""
+    """Write columns to the study's data/, repeating scalars and padding short columns."""
     cells, n_rows = {}, 0
     for key, val in cols.items():
         if isinstance(val, np.ndarray) and val.ndim == 0:
@@ -52,18 +52,20 @@ def write_csv(stem: str, cols: dict) -> None:
             n_rows = max(n_rows, len(cells[key]))
         else:
             cells[key] = _fmt(val)  # scalar -> broadcast below
-    with open(DATA_DIR / f"{stem}.csv", "w", newline="") as fh:
+    path = plotting.DATA_DIR / f"{stem}.csv"
+    with open(path, "w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(cells.keys())
         for i in range(n_rows):
             w.writerow([c if isinstance(c, str) else (c[i] if i < len(c) else "")
                         for c in cells.values()])
-    print(f"  wrote data/{stem}.csv")
+    plotting.WRITTEN.append(path)
+    print(f"  wrote {path.relative_to(plotting.DEV_DIR.parent)}")
 
 
 def read_csv(stem: str) -> dict:
-    """Read data/<stem>.csv, dropping trailing empty cells in each column."""
-    with open(DATA_DIR / f"{stem}.csv", newline="") as fh:
+    """Read the study's data/<stem>.csv, dropping trailing empty cells in each column."""
+    with open(plotting.DATA_DIR / f"{stem}.csv", newline="") as fh:
         rows = list(csv.reader(fh))
     header, body = rows[0], rows[1:]
     out = {}
@@ -677,33 +679,36 @@ def fig_hollow_sweep() -> None:
     plotting.save(figs, "hollow_sweep")
 
 
+# Figure name -> (study whose data/ and figures/ it uses, renderer).
 FIGURES = {
-    "matchgate_convergence": fig_matchgate_convergence,
-    "matchgate_scaling": fig_matchgate_scaling,
-    "uniform_prior_mean": fig_uniform_prior_mean,
-    "preconditioning_effect": fig_preconditioning_effect,
-    "dla_regime_contrast": fig_dla_regime_contrast,
-    "input_purity_scaling": fig_input_purity_scaling,
-    "offdiag_purity": fig_offdiag_purity,
-    "purity_regime_contrast": fig_purity_regime_contrast,
-    "precondition_training": fig_precondition_training,
-    "latent_drift": fig_latent_drift,
-    "latent_drift_hist": fig_latent_drift_hist,
-    "channel_scaling": fig_channel_scaling,
-    "doping_variance": fig_doping_variance,
-    "hollow_dimension": fig_hollow_dimension,
-    "hollow_sweep": fig_hollow_sweep,
-    "reuploading_depth": fig_reuploading_depth,
-    "encoding_landscape": fig_encoding_landscape,
-    "encoding_mean": fig_encoding_mean,
+    "uniform_prior_mean": ("s1-closed-forms", fig_uniform_prior_mean),
+    "preconditioning_effect": ("s1-closed-forms", fig_preconditioning_effect),
+    "offdiag_purity": ("s1-closed-forms", fig_offdiag_purity),
+    "purity_regime_contrast": ("s1-closed-forms", fig_purity_regime_contrast),
+    "matchgate_convergence": ("s2-dla-scaling", fig_matchgate_convergence),
+    "matchgate_scaling": ("s2-dla-scaling", fig_matchgate_scaling),
+    "dla_regime_contrast": ("s2-dla-scaling", fig_dla_regime_contrast),
+    "input_purity_scaling": ("s2-dla-scaling", fig_input_purity_scaling),
+    "precondition_training": ("s3-training", fig_precondition_training),
+    "latent_drift": ("s3-training", fig_latent_drift),
+    "latent_drift_hist": ("s3-training", fig_latent_drift_hist),
+    "channel_scaling": ("s3-training", fig_channel_scaling),
+    "doping_variance": ("s4-hardness", fig_doping_variance),
+    "hollow_dimension": ("s4-hardness", fig_hollow_dimension),
+    "hollow_sweep": ("s4-hardness", fig_hollow_sweep),
+    "reuploading_depth": ("s5-encoding", fig_reuploading_depth),
+    "encoding_landscape": ("s5-encoding", fig_encoding_landscape),
+    "encoding_mean": ("s5-encoding", fig_encoding_mean),
 }
 
 
 def main(argv=None) -> None:
-    """Redraw figures from ``data/*.csv``: all of them, or the named ones."""
+    """Redraw figures from ``dev/<study>/data/*.csv``: all of them, or the named ones."""
     names = list(argv if argv is not None else sys.argv[1:]) or list(FIGURES)
     for name in names:
-        FIGURES[name]()
+        study, fig = FIGURES[name]
+        plotting.set_study(study)
+        fig()
 
 
 if __name__ == "__main__":

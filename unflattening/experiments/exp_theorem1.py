@@ -84,7 +84,3 @@ def main() -> None:
     part_convergence(rng, key)
     part_scaling(rng, jax.random.PRNGKey(7))
     print("theorem1: done")
-
-
-if __name__ == "__main__":
-    main()

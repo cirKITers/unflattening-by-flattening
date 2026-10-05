@@ -74,7 +74,3 @@ def main() -> None:
     part_mean(rng)
     part_preconditioning(rng)
     print("uniform_prior: done")
-
-
-if __name__ == "__main__":
-    main()

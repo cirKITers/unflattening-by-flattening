@@ -73,7 +73,3 @@ def part_doping(rng, key, ns=N_RANGE, ts=TS, n_samples=N_SAMPLES, n_rep=N_REP) -
 def main() -> None:
     rng = np.random.default_rng(7)
     part_doping(rng, jax.random.PRNGKey(23))
-
-
-if __name__ == "__main__":
-    main()
