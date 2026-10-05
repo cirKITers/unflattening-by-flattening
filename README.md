@@ -1,44 +1,82 @@
-# Unflattening by Flattening - Numerical Experiments
+# Unflattening by Flattening
 
-This repository contains the numerical experiments and figure generator for [Unflattening by Flattening -- How Input Distributions Shape Output Variance in Angle-Encoded Circuits](). 
-Our paper studies how input distributions and circuit algebras affect the trainability of quantum machine learning circuits.
+This project contains the numerical experiments and figure generator for
+*Unflattening by Flattening: How Input Distributions Shape Output Variance in
+Angle-Encoded Circuits*. The paper studies how input distributions and circuit
+algebras affect the trainability of quantum machine learning circuits.
 
-## Getting Started
+Technology:
 
-We require Python 3.12 and [uv](https://docs.astral.sh/uv/) installed.
-Numerical experiments use JAX; the default CPU installation is sufficient.
+- [qml-essentials](https://github.com/cirKITers/qml-essentials): quantum Fourier models and Lie-algebra utilities
+- [jaqsi](https://github.com/cirKITers/jaqsi): simulator in JAX
+- JAX: array computation and automatic differentiation
+- Optax: optimization and training
+- NumPy: sampling and numerical analysis
 
-```bash
-uv sync --locked
+## Architecture
+
+The experiments compare input g-purity and output variance across input
+distributions and circuit algebras. Matchgate and off-diagonal XX/YY circuits
+provide the main comparisons. Further studies cover non-Gaussian doping, data
+re-uploading, encoding weights, and classical preconditioning. The training
+studies fit a Fourier target and track loss, gradient dispersion, and latent
+input distributions.
+
+The project separates numerical experiments from figure rendering. Each
+experiment generates its own inputs, writes numeric CSV files to `data/`, and
+renders its figures in `figures/`. The figure module can redraw those figures
+from existing CSV files without rerunning the experiments.
+
+## Layout
+
+```text
+unflattening/     experiments and utilities shared by all studies
+├── cli.py        experiment registry and command-line runner
+├── experiments/  one module per study, with parameters and a main() entry point
+├── figures.py    CSV I/O and figure rendering
+└── utils/
+    ├── dla.py    Pauli-string Lie algebras and statevector validation
+    ├── doping.py non-Gaussian RZZ gates in matchgate circuits
+    ├── priors.py angle priors, polar encoding, and input preconditioning
+    ├── purity.py product-state g-purity and analytic variance
+    └── plotting.py shared figure style and PGF/PNG export
+data/             numeric CSV results
+figures/          PGF figures and PNG previews
+```
+
+## Getting started
+
+Install Python 3.12 or later and [uv](https://docs.astral.sh/uv/), then run
+`uv sync --locked`. The default JAX CPU installation is sufficient. PGF export
+requires a working LaTeX installation with `pdflatex`, `amsmath`, and `amssymb`;
+PNG previews are written even when PGF export fails.
+
+**1. List the experiments.** The command shows the available names and a short
+description of each study:
+
+```sh
 uv run --no-sync unflatten --list
+```
+
+**2. Run experiments.** Pass one or more names, or use `all` to run every
+experiment in the order shown by `--list`:
+
+```sh
+uv run --no-sync unflatten closedform uniform_prior theorem1
+uv run --no-sync unflatten latent_drift channel_scaling
 uv run --no-sync unflatten all
 ```
 
-`all` runs the experiments in the order shown by `--list`. 
-To run selected experiments, pass one or more names:
+Each experiment can also run as a module, for example
+`uv run --no-sync python -m unflattening.experiments.exp_closedform`. Set random
+seeds, sample counts, qubit ranges, and training epochs through the constants
+near the top of each module. The command-line interface uses these defaults;
+there is no separate configuration file or external dataset. Results are
+stochastic, so small numerical differences across machines or JAX backends are
+possible.
 
-```bash
-uv run --no-sync unflatten closedform uniform_prior theorem1
-uv run --no-sync unflatten latent_drift channel_scaling
-```
-
-Each experiment can also run as a module, for example `uv run --no-sync python -m unflattening.experiments.exp_closedform`.
-Experiment parameters, including random seeds, sample counts, qubit ranges, and training epochs, are constants near the top of each module.
-The command-line interface uses these defaults; there is no separate configuration file or external dataset.
-Results are stochastic, so small numerical differences across machines or JAX backends are possible.
-
-Experiments write numeric CSV files to `data/` and render PGF figures with PNG previews in `figures/`.
-To redraw every figure from existing CSV files without rerunning the experiments, use:
-
-```bash
-uv run --no-sync python -m unflattening.figures
-```
-
-To redraw one figure, append its name, for example `uv run --no-sync python -m unflattening.figures offdiag_purity`.
-PGF export requires a working LaTeX installation with `pdflatex`, `amsmath`, and `amssymb`.
-PNG exports are additionally available and run without LaTeX.
-
-## Experiments
+The experiment names and their outputs are listed below. CSV files use the
+`.csv` extension; figures use `.pgf` and `.png`:
 
 | Experiment | CSV output in `data/` | Figure names in `figures/` |
 | --- | --- | --- |
@@ -57,6 +95,20 @@ PNG exports are additionally available and run without LaTeX.
 | `encoding_weights` | `encoding_landscape`, `encoding_mean` | same names |
 | `acceptance_rate` | `acceptance_rate` | none |
 
-The training curves for `precondition_training` and `latent_drift` compare progress within each input law.
-Their uniform and clustered datasets have different task difficulty, so relative losses across laws are not a direct measure of which prior trains better.
-The re-uploading and hollow-algebra studies are finite-size numerical checks, not asymptotic proofs.
+The training curves for `precondition_training` and `latent_drift` compare
+progress within each input law. Their uniform and clustered datasets have
+different task difficulty, so relative losses across laws are not a direct
+measure of which prior trains better. The re-uploading and hollow-algebra
+studies are finite-size numerical checks, not asymptotic proofs.
+
+**3. Redraw figures.** Render every figure from existing CSV files:
+
+```sh
+uv run --no-sync python -m unflattening.figures
+```
+
+To redraw selected figures, append their names:
+
+```sh
+uv run --no-sync python -m unflattening.figures offdiag_purity
+```
