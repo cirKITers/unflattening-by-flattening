@@ -13,20 +13,6 @@ Technology:
 - Optax: optimization and training
 - NumPy: sampling and numerical analysis
 
-## Architecture
-
-The experiments compare input g-purity and output variance across input
-distributions and circuit algebras. Matchgate and off-diagonal XX/YY circuits
-provide the main comparisons. Further studies cover non-Gaussian doping, data
-re-uploading, encoding weights, and classical preconditioning. The training
-studies fit a Fourier target and track loss, gradient dispersion, and latent
-input distributions.
-
-The project separates numerical experiments from figure rendering. Each
-experiment generates its own inputs, writes numeric CSV files to `data/`, and
-renders its figures in `figures/`. The figure module can redraw those figures
-from existing CSV files without rerunning the experiments.
-
 ## Layout
 
 ```text
@@ -112,3 +98,17 @@ To redraw selected figures, append their names:
 ```sh
 uv run --no-sync python -m unflattening.figures offdiag_purity
 ```
+
+## Architecture
+
+The experiments compare input g-purity and output variance across input
+distributions and circuit algebras. Matchgate and off-diagonal XX/YY circuits
+provide the main comparisons. Further studies cover non-Gaussian doping, data
+re-uploading, encoding weights, and classical preconditioning. The training
+studies fit a Fourier target and track loss, gradient dispersion, and latent
+input distributions.
+
+The project separates numerical experiments from figure rendering. Each
+experiment generates its own inputs, writes numeric CSV files to `data/`, and
+renders its figures in `figures/`. The figure module can redraw those figures
+from existing CSV files without rerunning the experiments.
