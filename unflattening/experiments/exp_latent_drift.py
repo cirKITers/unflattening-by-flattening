@@ -14,7 +14,7 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 
-from qml_essentials import operations as op
+from jaqsi import gateset as op
 from qml_essentials.model import Model
 
 from unflattening import figures

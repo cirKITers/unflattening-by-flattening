@@ -14,7 +14,7 @@ import jax.numpy as jnp
 
 from unflattening import figures
 from qml_essentials.model import Model
-from qml_essentials import operations as op
+from jaqsi import gateset as op
 from unflattening.utils.priors import sample_uniform, sample_clustered
 
 N_QUBITS = 6              # qubits (statevector)

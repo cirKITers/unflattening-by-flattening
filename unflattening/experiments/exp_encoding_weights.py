@@ -65,8 +65,7 @@ def part_crosscheck(n_qubits: int = N_QUBITS, seed: int = SEED) -> None:
     xs = np.random.default_rng(seed).uniform(0, 2 * np.pi, size=64)  # own rng: no draw-order shift
     for kind, enc in ENCODINGS.items():
         w = weights(enc, n)
-        model = Model(n_qubits=n, n_layers=1, circuit_type="No_Ansatz",
-                      encoding=enc, remove_zero_encoding=False)
+        model = Model(n_qubits=n, n_layers=1, circuit_type="No_Ansatz", encoding=enc)
         states = np.asarray(model(inputs=xs[:, None], execution_type="state"))
         p_model = np.array([g_purity_from_basis(s, basis) for s in states])
         p_cf = offdiag_closed_form(xs[:, None] * w[None, :])

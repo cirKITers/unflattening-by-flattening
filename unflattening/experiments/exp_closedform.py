@@ -12,8 +12,8 @@ import csv
 import jax.numpy as jnp
 import numpy as np
 
-from qml_essentials import jaqsi as js
-from qml_essentials.gates import Gates
+import jaqsi as js
+from jaqsi.gates import Gates
 
 from unflattening.utils import dla
 from unflattening.utils.purity import product_state, g_purity_closed_form, g_purity_from_basis
